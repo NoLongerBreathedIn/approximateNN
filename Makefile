@@ -9,7 +9,7 @@ OS := $(shell uname -s)
 # Put in -DSUPPORT_OPENCL_V1_2 here if using old OpenCL.
 OCL_OPT := 
 
-ifeq ("$(OS)", "Darwin")
+ifeq ($(OS), Darwin)
 	OSOPT := -DOSX
 else
 	OSOPT := -DLINUX
