@@ -317,7 +317,7 @@ size_t *TWO_GONLY(det_results, cl_context c, cl_command_queue q,
 			 pointers, graph, ipts), ycnt, k, k);
     relMem(pointers);
     pointers = ipts;
-    BUFTYPE(ftype) dpts = MK_BUF_RW_NA(c, ftype, k * (k + 1) * ycnt);
+    BUFTYPE(ftype) dpts = MK_BUF_RW_RO(c, ftype, k * (k + 1) * ycnt);
     enqueueCopy2D(q, ftype, len, k * (k + 1), 0, dists, dpts, ycnt, k);
     relMem(dists);
     dists = dpts;
