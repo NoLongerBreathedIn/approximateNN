@@ -71,8 +71,8 @@ static void setup(void) {
     {
      "#define ftype " XSTR(ftype) "\n",
      "#define as_i_ftype as_u" XSTR(i_ftype) "\n",
-     (sizeof(size_t) == 8? "#define size_t ulong\n" : 
-      "#define size_t uint\n"),
+     (sizeof(size_t) == 8? "#define cpu_size_t ulong\n" : 
+      "#define cpu_size_t uint\n"),
      INSERT_COMP_HERE // this line is replaced by the contents of compute.cl
     };
   cl_int error;
@@ -344,6 +344,13 @@ static cl_kernel cr_prods(size_t d, size_t n, cl_mem v, cl_mem p, cl_mem o) {
   ska(k, 2, v);
   ska(k, 3, p);
   ska(k, 4, o);
+  return(k);
+}
+
+static cl_kernel cr_sqrtip(size_t h, cl_mem a) {
+  cl_kernel k = clone_kernel(sqrtip);
+  ska(k, 0, h);
+  ska(k, 1, a);
   return(k);
 }
 

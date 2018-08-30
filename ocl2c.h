@@ -38,6 +38,7 @@ static uint as_uint(float f) {
 #define CONCATENATE(a, b) a ## b
 #define XCONCAT(a, b) CONCATENATE(a, b)
 #define as_i_ftype XCONCAT(as_u, i_ftype)
-
+// We are on the CPU.
+#define cpu_size_t size_t
 
 #endif

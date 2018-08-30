@@ -12,7 +12,7 @@
 // If a is n by d, r is n/2 by d,
 // Θ(1) depth, Θ(nd) work,
 // add_rows_step_0(d, n, a, r)(n/2, d);
-__kernel void add_rows_step_0(const size_t height, const size_t len,
+__kernel void add_rows_step_0(const cpu_size_t height, const cpu_size_t len,
 			      __global const ftype *a,
 			      __global ftype *r) {
   size_t x = get_global_id(0), y = get_global_id(1);
@@ -23,7 +23,7 @@ __kernel void add_rows_step_0(const size_t height, const size_t len,
 // If r is n by d,
 // Θ(1) depth, Θ(nd) work,
 // add_rows_step_n(d, n, r)(n/2, d);
-__kernel void add_rows_step_n(const size_t height, const size_t len,
+__kernel void add_rows_step_n(const cpu_size_t height, const cpu_size_t len,
 			      __global ftype *r) {
   size_t x = get_global_id(0), y = get_global_id(1);
   ftype g = !x && len % 2 ? r[(len - 1) * height + y] : 0;
@@ -33,7 +33,7 @@ __kernel void add_rows_step_n(const size_t height, const size_t len,
 // If r is length d,
 // Θ(1) depth, Θ(d) work,
 // divide_by_length(n, r)(d);
-__kernel void divide_by_length(const size_t length, __global ftype *r) {
+__kernel void divide_by_length(const cpu_size_t length, __global ftype *r) {
   size_t x = get_global_id(0);
   r[x] /= length;
 }
@@ -41,7 +41,7 @@ __kernel void divide_by_length(const size_t length, __global ftype *r) {
 // If r is length d and m is n by d,
 // Θ(1) depth, Θ(nd) work,
 // subtract_off(d, m, r)(n, d);
-__kernel void subtract_off(const size_t height,
+__kernel void subtract_off(const cpu_size_t height,
 			   __global ftype *a,
 			   __global const ftype *r) {
   size_t x = get_global_id(0), y = get_global_id(1);
@@ -52,9 +52,9 @@ __kernel void subtract_off(const size_t height,
 // If i, j, a are length p and m is n by h,
 // Θ(1) depth, Θ(np) work,
 // apply_rotation(h, i, j, a, m)(n, p);
-__kernel void apply_rotation(const size_t height,
-			     __global const size_t *i, // first coordinate
-			     __global const size_t *j, // second coordinate
+__kernel void apply_rotation(const cpu_size_t height,
+			     __global const cpu_size_t *i, // first coordinate
+			     __global const cpu_size_t *j, // second coordinate
 			     __global const ftype *ang,
 			     __global ftype *a) {
   size_t x = get_global_id(0) * height, y = get_global_id(1);
@@ -74,9 +74,9 @@ __kernel void apply_rotation(const size_t height,
 // r is size n by e,
 // Θ(1) depth, Θ(ne) work,
 // apply_permutation(d, e, perm, a, r)(n, e);
-__kernel void apply_permutation(const size_t height_pre,
-				const size_t height_post,
-				__global const size_t *perm,
+__kernel void apply_permutation(const cpu_size_t height_pre,
+				const cpu_size_t height_post,
+				__global const cpu_size_t *perm,
 				__global const ftype *a,
 				__global ftype *r) {
   size_t x = get_global_id(0), y = get_global_id(1);
@@ -85,9 +85,9 @@ __kernel void apply_permutation(const size_t height_pre,
 }
   
 // Undoes apply_permutation.
-__kernel void apply_perm_inv(const size_t height_pre,
-			     const size_t height_post,
-			     __global const size_t *perm,
+__kernel void apply_perm_inv(const cpu_size_t height_pre,
+			     const cpu_size_t height_post,
+			     __global const cpu_size_t *perm,
 			     __global const ftype *a,
 			     __global ftype *r) {
   size_t x = get_global_id(0), y = get_global_id(1);
@@ -98,8 +98,8 @@ __kernel void apply_perm_inv(const size_t height_pre,
 // If a is n by 1 << l,
 // Θ(1) depth, Θ(n * 2^l) work,
 // apply_walsh_step(l, s, a)(n, 1 << (l - 4));
-__kernel void apply_walsh_step(const size_t lheight,
-			       const size_t step,
+__kernel void apply_walsh_step(const cpu_size_t lheight,
+			       const cpu_size_t step,
 			       __global ftype *a) {
   size_t x = get_global_id(0) << lheight, y = get_global_id(1);
   if(!lheight)
@@ -132,11 +132,11 @@ __kernel void apply_walsh_step(const size_t lheight,
 // diff_results is n by (k - s) by d,
 // Θ(1) depth, Θ(n(k-s)d) work,
 // compute_diffs_squared(d, k, m, s, which, points, diff_results)(n, k-s, d);
-__kernel void compute_diffs_squared(const size_t dims,
-				    const size_t count,
-				    const size_t npts,
-				    const size_t skip,
-				    __global const size_t *which,
+__kernel void compute_diffs_squared(const cpu_size_t dims,
+				    const cpu_size_t count,
+				    const cpu_size_t npts,
+				    const cpu_size_t skip,
+				    __global const cpu_size_t *which,
 				    __global const ftype *pointsa,
 				    __global const ftype *points,
 				    __global ftype *diff_results) {
@@ -157,9 +157,9 @@ __kernel void compute_diffs_squared(const size_t dims,
 // If mat is n by k by d,
 // Θ(1) depth, Θ(nkd) work,
 // add_cols_step(d, s, k, mat)(n, k, s / 2);
-__kernel void add_cols_step(const size_t height,
-			    const size_t s,
-			    const size_t k,
+__kernel void add_cols_step(const cpu_size_t height,
+			    const cpu_size_t s,
+			    const cpu_size_t k,
 			    __global ftype *mat) {
   size_t x = get_global_id(0), y = get_global_id(1), z = get_global_id(2);
   ftype g = s & !z? mat[(x * k + y) * height + s - 1] : 0;
@@ -178,10 +178,10 @@ __kernel void add_cols_step(const size_t height,
 // If order and along are n by k,
 // Θ(1) depth, Θ(nk) work,
 // sort_two_step(k, n, s, ss, along, order)(n, 1 << ceil(lg(k) - 4));
-__kernel void sort_two_step(const size_t count,
+__kernel void sort_two_step(const cpu_size_t count,
 			    const int step,
 			    const int sstep,
-			    __global size_t *along,
+			    __global cpu_size_t *along,
 			    __global ftype *order) {
   size_t x = get_global_id(0) * count, y = get_global_id(1);
   for(int i = 0; i < 8; i++) {
@@ -209,8 +209,8 @@ __kernel void sort_two_step(const size_t count,
 // If along and order are n by k,
 // Θ(1) depth, Θ(nk) work,
 // rdups(k, along, order)(n, k - 1);
-__kernel void rdups(const size_t count,
-		    __global const size_t *along,
+__kernel void rdups(const cpu_size_t count,
+		    __global const cpu_size_t *along,
 		    __global ftype *order) {
   size_t x = get_global_id(0) * count, y = get_global_id(1);
   order[x + y] += 1.0 / (along[x + y] != along[x + y + 1]) - 1;
@@ -220,9 +220,9 @@ __kernel void rdups(const size_t count,
 // If points is n by d, results is length n,
 // Θ(d) depth, Θ(nd) work,
 // compute_signs(d, points, results)(n);
-__kernel void compute_signs(const size_t d,
+__kernel void compute_signs(const cpu_size_t d,
 			    __global const ftype *points,
-			    __global size_t *results) {
+			    __global cpu_size_t *results) {
   size_t x = get_global_id(0);
   size_t r = 0;
   for(size_t i = 0; i < d; i++)
@@ -235,11 +235,11 @@ __kernel void compute_signs(const size_t d,
 // which is n by m * (d + 1),
 // Θ(1) depth, Θ(nmd) work,
 // compute_which(d, m, wi_rev, which_in, which)(n, d + 1, m);
-__kernel void compute_which(const size_t d,
-			    const size_t max,
-			    __global const size_t *wi_rev,
-			    __global const size_t *which_in,
-			    __global size_t *which) {
+__kernel void compute_which(const cpu_size_t d,
+			    const cpu_size_t max,
+			    __global const cpu_size_t *wi_rev,
+			    __global const cpu_size_t *which_in,
+			    __global cpu_size_t *which) {
   size_t x = get_global_id(0), y = get_global_id(1), z = get_global_id(2);
   size_t p = which_in[(wi_rev[x] ^ (!!y << (y - 1))) * max + z];
   which[(x * (d + 1) + y) * max + z] = p;
@@ -249,13 +249,13 @@ __kernel void compute_which(const size_t d,
 // neighbors is n by l, after is m by k * (k + 1),
 // Θ(1) depth, Θ(mk^2) work,
 // supercharge(n, l, k, neighborsa, neighbors, after)(m, k, k);
-__kernel void supercharge(const size_t n,
-			  const size_t la,
-			  const size_t l,
-			  const size_t k,
-			  __global const size_t *neighborsa,
-			  __global const size_t *neighbors,
-			  __global size_t *after) {
+__kernel void supercharge(const cpu_size_t n,
+			  const cpu_size_t la,
+			  const cpu_size_t l,
+			  const cpu_size_t k,
+			  __global const cpu_size_t *neighborsa,
+			  __global const cpu_size_t *neighbors,
+			  __global cpu_size_t *after) {
   size_t x = get_global_id(0), y = get_global_id(1), z = get_global_id(2);
   size_t w = -(size_t)(n > neighborsa[x * la + y]);
   after[(x * (k + 1) + y + 1) * k + z]
@@ -265,11 +265,20 @@ __kernel void supercharge(const size_t n,
 // If v is m by d, p is n by d, o is m by n by d,
 // Θ(1) depth, Θ(mnd) work,
 // prods(d, n, v, p, o)(m, n, d);
-__kernel void prods(const size_t d,
-		    const size_t n,
+__kernel void prods(const cpu_size_t d,
+		    const cpu_size_t n,
 		    __global const ftype *v,
 		    __global const ftype *p,
 		    __global ftype *o) {
   size_t x = get_global_id(0), y = get_global_id(1), z = get_global_id(2);
   o[(x * n + y) * d + z] = v[x * d + z] * p[y * d + z];
+}
+
+// If a is n by h,
+// Θ(1) depth, Θ(nk) work,
+// sqrtip(h, a)(n, k);
+__kernel void sqrtip(const cpu_size_t h,
+		     __global ftype *a) {
+  size_t i = get_global_id(0) * h + get_global_id(1);
+  a[i] = sqrt(a[i]);
 }
