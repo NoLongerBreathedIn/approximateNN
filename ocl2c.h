@@ -4,8 +4,6 @@
 
 #define __kernel static
 #define __global
-#define rsqrt(x) (1/sqrt(x))
-#define barrier(x)
 
 #define sincos(a, b) (*(b) = cos(a), sin(a))
 

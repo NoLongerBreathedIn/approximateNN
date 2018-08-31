@@ -11,17 +11,6 @@
 #define XSTR(s) STR(s)
 #define STR(s) #s
 
-static unsigned lg(size_t d) {
-  unsigned r = (d > 0xFFFFFFFF) << 5;
-  d >>= r;
-  unsigned s = (d > 0xFFFF) << 4;
-  d >>= s, r |= s;
-  d >>= s = (d > 0xFF) << 3, r |= s;
-  d >>= s = (d > 0xF) << 2, r |= s;
-  d >>= s = (d > 3) << 1;
-  return(r | s | d >> 1);
-}
-
 #ifdef SUPPORT_OPENCL_V1_2
 #define clCreateCommandQueueWithProperties(a, b, c, d) \
   clCreateCommandQueue(a, b, 0, d)
@@ -251,11 +240,12 @@ static cl_kernel cr_apply_perm_inv(size_t hb, size_t ha,
   return(k);
 }
 
-static cl_kernel cr_apply_walsh_step(size_t l, size_t i, cl_mem a) {
+static cl_kernel cr_apply_walsh_step(size_t l, size_t i, ftype r, cl_mem a) {
   cl_kernel k = clone_kernel(apply_walsh_step);
   ska(k, 0, l);
   ska(k, 1, i);
-  ska(k, 2, a);
+  ska(k, 2, r);
+  ska(k, 3, a);
   return(k);
 }
 

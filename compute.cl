@@ -95,29 +95,29 @@ __kernel void apply_perm_inv(const cpu_size_t height_pre,
     r[x * height_post + perm[y]] = a[x * height_pre + y];
 }
 
+// Walsh:
+// for(i = 0; i < l; i++)
+//   apply_walsh_step(l, i, a)(n, 1 << (l - 1))
 // If a is n by 1 << l,
 // Θ(1) depth, Θ(n * 2^l) work,
-// apply_walsh_step(l, s, a)(n, 1 << (l - 4));
+// apply_walsh_step(l, s, a)(n, 1 << (l - 1));
 __kernel void apply_walsh_step(const cpu_size_t lheight,
 			       const cpu_size_t step,
+			       const ftype rsr,
 			       __global ftype *a) {
   size_t x = get_global_id(0) << lheight, y = get_global_id(1);
   if(!lheight)
     return;
-  for(int j = 0; j < 8 && j < 1 << lheight; j++) {
-      size_t y1 = y << 3 | j;
-      size_t yh = (y1 >> step) << step;
-      size_t yl = y1 ^ yh;
-      size_t ca = x | yh << 1 | yl;
-      size_t cb = ca | 1 << step;
-      ftype alpha = a[ca], beta = a[cb];
-      a[ca] = (alpha + beta) / (step % 2 + 1);
-      a[cb] = (alpha - beta) / (step % 2 + 1);
-  }
+  size_t yh = (y >> step) << step;
+  size_t yl = y ^ yh;
+  size_t ca = x | yh << 1 | yl;
+  size_t cb = ca | 1 << step;
+  ftype alpha = a[ca], beta = a[cb];
+  a[ca] = (alpha + beta) / (step % 2 + 1);
+  a[cb] = (alpha - beta) / (step % 2 + 1);
   if(step == 0 && lheight % 2) {
-    ftype rsr = rsqrt(2.0);
-    for(int j = 0; j < 16 && j < 1 << lheight; j++)
-      a[x | y << 4 | j] *= rsr;
+    for(int j = 0; j < 1; j++)
+      a[x | y << 1 | j] *= rsr;
   }
 }
  
@@ -167,41 +167,35 @@ __kernel void add_cols_step(const cpu_size_t height,
 }
 
 // Sorting:
-// nth = 1 << ceil(lg(k) - 4);
-// if(nth <= max_conc_threads)
-//   sort_two(k, n, along, order)(n, nth)(1);
-// else
-//   for(s = 0; (k - 1) >> s; s++)
-//     for(ss = s; ss >= 0; ss--)
-//       sort_two_step(k, n, s, ss, along, order)(n, nth);
+// nth = ceil(lg(k)) - 1;
+// for(s = 0; (k - 1) >> s; s++)
+//   for(ss = s; ss >= 0; ss--)
+//     sort_two_step(k, n, s, ss, along, order)(n, nth);
 
 // If order and along are n by k,
 // Θ(1) depth, Θ(nk) work,
-// sort_two_step(k, n, s, ss, along, order)(n, 1 << ceil(lg(k) - 4));
+// sort_two_step(k, n, s, ss, along, order)(n, 1 << (ceil(lg(k)) - 1));
 __kernel void sort_two_step(const cpu_size_t count,
 			    const int step,
 			    const int sstep,
 			    __global cpu_size_t *along,
 			    __global ftype *order) {
   size_t x = get_global_id(0) * count, y = get_global_id(1);
-  for(int i = 0; i < 8; i++) {
-    size_t y1 = y << 3 | i;
-    size_t y_high = (y1 >> sstep) << sstep;
-    size_t y_low = y1 ^ y_high;
-    size_t y_a = y_high << 1 | y_low;
-    if(sstep == step)
-      y_low = (1 << sstep) - y_low - 1;
-    size_t y_b = y_high << 1 | 1 << sstep | y_low;
-    if(count > y_b) {
-      size_t alpha = x + y_a;
-      size_t beta = x + y_b;
-      ftype ao = order[alpha], bo = order[beta];
-      size_t aa = along[alpha], ba = along[beta];
-      ulong doswap = -(ao > bo); // minimize divergence.
-      alpha ^= beta, beta ^= alpha & doswap, alpha ^= beta;
-      along[alpha] = aa, along[beta] = ba;
-      order[alpha] = ao, order[beta] = bo;
-    }
+  size_t y_high = (y >> sstep) << sstep;
+  size_t y_low = y ^ y_high;
+  size_t y_a = y_high << 1 | y_low;
+  if(sstep == step)
+    y_low = (1 << sstep) - y_low - 1;
+  size_t y_b = y_high << 1 | 1 << sstep | y_low;
+  if(count > y_b) {
+    size_t alpha = x + y_a;
+    size_t beta = x + y_b;
+    ftype ao = order[alpha], bo = order[beta];
+    size_t aa = along[alpha], ba = along[beta];
+    ulong doswap = -(ao > bo); // minimize divergence.
+    alpha ^= beta, beta ^= alpha & doswap, alpha ^= beta;
+    along[alpha] = aa, along[beta] = ba;
+    order[alpha] = ao, order[beta] = bo;
   }
 }
 

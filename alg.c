@@ -9,6 +9,17 @@
 #define rot_info MK_NAME(rot_info_int)
 #define ortho_info MK_NAME(ortho_info_int)
 
+static unsigned lg(size_t d) {
+  unsigned r = (d > 0xFFFFFFFF) << 5;
+  d >>= r;
+  unsigned s = (d > 0xFFFF) << 4;
+  d >>= s, r |= s;
+  d >>= s = (d > 0xFF) << 3, r |= s;
+  d >>= s = (d > 0xF) << 2, r |= s;
+  d >>= s = (d > 3) << 1;
+  return(r | s | d >> 1);
+}
+
 typedef struct {
   BUFTYPE(size_t) *is;
   BUFTYPE(size_t) *js;
@@ -111,12 +122,14 @@ void MK_NAME(cleanup)(OEVENT e, OINT i, void *stuff) {
 
 void FST_GONLY(walsh, cl_command_queue q,
 	       size_t d, size_t n, BUFTYPE(ftype) a) {
+  // 1 / sqrt(2)
+  static const ftype rsr = .7071067811865475244008443621048490392848;
   if(d == 1)
     return;
   int l = lg(d);
-  size_t nth = max(d / 16, 1);
+  size_t nth = d / 2;
   for(int i = 0; i < l; i++)
-    LOOP2(q, apply_walsh_step(l, i, a), n, nth);
+    LOOP2(q, apply_walsh_step(l, i, rsr, a), n, nth);
 }
 
 void FST_GONLY(add_up_rows, cl_command_queue q,
@@ -137,7 +150,7 @@ void FST_GONLY(add_up_cols, cl_command_queue q,size_t d, size_t k,
 void FST_GONLY(do_sort, cl_command_queue q, size_t k, size_t n,
 	     BUFTYPE(size_t) along, BUFTYPE(ftype) order) {
   int lk = lg(k);
-  size_t nth = (size_t)1 << max(lk - 4, 0);
+  size_t nth = (size_t)1 << (lk - 1);
   for(int s = 0; s < lk; s++)
     for(int ss = s; ss >= 0; ss--)
       LOOP2(q, sort_two_step(k, s, ss, along, order), n, nth);

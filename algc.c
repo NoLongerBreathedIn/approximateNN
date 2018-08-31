@@ -10,17 +10,6 @@
 
 #define max(a, b) ((a) < (b)?b:(a))
 
-static unsigned lg(size_t d) {
-  unsigned r = (d > 0xFFFFFFFF) << 5;
-  d >>= r;
-  unsigned s = (d > 0xFFFF) << 4;
-  d >>= s, r |= s;
-  d >>= s = (d > 0xFF) << 3, r |= s;
-  d >>= s = (d > 0xF) << 2, r |= s;
-  d >>= s = (d > 3) << 1;
-  return(r | s | d >> 1);
-}
-
 #define setup()
 
 #define MAKE_COMMAND_QUEUE(a, b, c, d, q)
