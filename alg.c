@@ -78,8 +78,8 @@ ortho_info FST_GONLY(make_ortho_info, cl_context c,
   perm = rand_perm(dim_high, dim_max);
   orti.perm_b = MK_BUF_COPY_RO_NA(c, size_t, dim_max, perm);
   free(perm);
-  perm = rand_perm(dim_low, dim_max);
-  orti.perm_ai = MK_BUF_COPY_RO_NA(c, size_t, dim_max, perm);
+  perm = rand_perm(dim_low, dim_low);
+  orti.perm_ai = MK_BUF_COPY_RO_NA(c, size_t, dim_low, perm);
   free(perm);
   return(orti);
 }
@@ -121,15 +121,17 @@ void MK_NAME(cleanup)(OEVENT e, OINT i, void *stuff) {
 }
 
 void FST_GONLY(walsh, cl_command_queue q,
-	       size_t d, size_t n, BUFTYPE(ftype) a) {
+	       size_t d, size_t n, size_t w, BUFTYPE(ftype) a) {
   // 1 / sqrt(2)
   static const ftype rsr = .7071067811865475244008443621048490392848;
   if(d == 1)
     return;
   int l = lg(d);
-  size_t nth = d / 2;
-  for(int i = 0; i < l; i++)
+  for(int i = l - 1; i >= 0; i++) {
+    size_t r = ~(size_t)0 << (i + 1);
+    size_t nth = (w + ~r & r) >> 1;
     LOOP2(q, apply_walsh_step(l, i, rsr, a), n, nth);
+  }
 }
 
 void FST_GONLY(add_up_rows, cl_command_queue q,
@@ -150,10 +152,12 @@ void FST_GONLY(add_up_cols, cl_command_queue q,size_t d, size_t k,
 void FST_GONLY(do_sort, cl_command_queue q, size_t k, size_t n,
 	     BUFTYPE(size_t) along, BUFTYPE(ftype) order) {
   int lk = lg(k);
-  size_t nth = (size_t)1 << (lk - 1);
+  size_t yms[lk];
+  for(int s = 0; s < lk; s++)
+    yms[s] = (k >> (s + 1)) << s | (k & (1 << s) - 1 & -(k >> s & 1));
   for(int s = 0; s < lk; s++)
     for(int ss = s; ss >= 0; ss--)
-      LOOP2(q, sort_two_step(k, s, ss, along, order), n, nth);
+      LOOP2(q, sort_two_step(k, s, ss, along, order), n, yms[ss]);
 }
 
 
@@ -179,13 +183,12 @@ BUFTYPE(size_t) TWO_GONLY(run_initial, cl_context c, cl_command_queue q,
   BUFTYPE(ftype) pc2 = MK_BUF_RW_NA(c, ftype, n * d_max);
   LOOP2(q, apply_permutation(d_high, d_max, o->perm_b, pc, pc2), n, d_max);
   relMem(pc);
-  FST_GONLY(walsh, q, d_max, n, pc2);
+  FST_GONLY(walsh, q, d_max, n, d_low, pc2);
+  pc = MK_BUF_RW_NA(c, ftype, n * d_low);
+  LOOP2(q, apply_perm_inv(d_max, d_low, o->perm_ai, pc2, pc), n, d_low);
   for(size_t i = 0; i < rots_a; i++)
     LOOP2(q, apply_rotation(d_max, o->ra.is[i], o->ra.js[i], o->ra.as[i], pc2),
 	  n, rot_len_a);
-
-  pc = MK_BUF_RW_NA(c, ftype, n * d_low);
-  LOOP2(q, apply_perm_inv(d_max, d_low, o->perm_ai, pc2, pc), n, d_max);
   relMem(pc2);
   BUFTYPE(size_t) signs = MK_BUF_RW_RO(c, size_t, n);
   LOOP1(q, compute_signs(d_low, pc, signs), n);
@@ -210,14 +213,15 @@ void TWO_GONLY(save_vecs, cl_context c, cl_command_queue q,
       vcs[i * d_low + j] = i == j;
   BUFTYPE(ftype) vecs = MK_BUF_COPY_RO_NA(c, ftype, d_low * d_low, vcs);
   free(vcs);
-  BUFTYPE(ftype) vecs2 = MK_BUF_RW_NA(c, ftype, d_low * d_max);
-  LOOP2(q, apply_permutation(d_low, d_max, o->perm_ai, vecs, vecs2),
-	    d_low, d_max);
-  relMem(vecs);
   for(long i = rots_a - 1; i >= 0; i--)
-    LOOP2(q, apply_rotation(d_max, o->ra.js[i], o->ra.is[i], o->ra.as[i],
-			    vecs2), d_low, rot_len_a);
-  FST_GONLY(walsh, q, d_max, d_low, vecs2);
+    LOOP2(q, apply_rotation(d_low, o->ra.js[i], o->ra.is[i], o->ra.as[i],
+			    vecs), d_low, rot_len_a);
+  BUFTYPE(ftype) vecs2 = MK_BUF_RW_WO(c, ftype, d_low * d_max);
+  fillZeroes(q, vecs2, d_low * d_max * sizeof(ftype));
+  LOOP2(q, apply_permutation(d_low, d_max, o->perm_ai, vecs, vecs2),
+	    d_low, d_low);
+  relMem(vecs);
+  FST_GONLY(walsh, q, d_max, d_low, d_max, vecs2);
   vecs = MK_BUF_RW_RO(c, ftype, d_low * d_high);
   LOOP2(q, apply_perm_inv(d_max, d_high, o->perm_b, vecs2, vecs),
 	d_low, d_max);

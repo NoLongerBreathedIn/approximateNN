@@ -49,6 +49,7 @@ static void finish_cols(size_t h, size_t k, size_t skip, ftype *mat,
 #define MK_BUF_USE_RO_NA(cont, type, sz, src) (src)
 #define MK_BUF_RW_NA(cont, type, sz) MB(type, sz)
 #define MK_BUF_RW_RO(cont, type, sz) MB(type, sz)
+#define MK_BUF_RW_WO(cont, type, sz) MB(type, sz)
 #define MK_SUBBUF_RO_NA_REG(t, b, off, sz) ((b) + (off))
 #define TYPE_OF_COMP cpu
 #define relMem free
@@ -58,5 +59,6 @@ static void finish_cols(size_t h, size_t k, size_t skip, ftype *mat,
 #define waitForQueueThenCall(q, f, a) f(0, 0, a)
 #define OINT char
 #define OEVENT char
-
+#define fillZeroes(q, p, sz) memset((void *)p, 0, sz)
+  
 #include "alg.c"

@@ -106,8 +106,6 @@ __kernel void apply_walsh_step(const cpu_size_t lheight,
 			       const ftype rsr,
 			       __global ftype *a) {
   size_t x = get_global_id(0) << lheight, y = get_global_id(1);
-  if(!lheight)
-    return;
   size_t yh = (y >> step) << step;
   size_t yl = y ^ yh;
   size_t ca = x | yh << 1 | yl;
@@ -183,20 +181,18 @@ __kernel void sort_two_step(const cpu_size_t count,
   size_t x = get_global_id(0) * count, y = get_global_id(1);
   size_t y_high = (y >> sstep) << sstep;
   size_t y_low = y ^ y_high;
-  size_t y_a = y_high << 1 | y_low;
+  size_t y_b = y_high << 1 | 1 << sstep | y_low;
   if(sstep == step)
     y_low = (1 << sstep) - y_low - 1;
-  size_t y_b = y_high << 1 | 1 << sstep | y_low;
-  if(count > y_b) {
-    size_t alpha = x + y_a;
-    size_t beta = x + y_b;
-    ftype ao = order[alpha], bo = order[beta];
-    size_t aa = along[alpha], ba = along[beta];
-    ulong doswap = -(ao > bo); // minimize divergence.
-    alpha ^= beta, beta ^= alpha & doswap, alpha ^= beta;
-    along[alpha] = aa, along[beta] = ba;
-    order[alpha] = ao, order[beta] = bo;
-  }
+  size_t y_a = y_high << 1 | y_low;
+  size_t alpha = x + y_a;
+  size_t beta = x + y_b;
+  ftype ao = order[alpha], bo = order[beta];
+  size_t aa = along[alpha], ba = along[beta];
+  ulong doswap = -(ao > bo); // minimize divergence.
+  alpha ^= beta, beta ^= alpha & doswap, alpha ^= beta;
+  along[alpha] = aa, along[beta] = ba;
+  order[alpha] = ao, order[beta] = bo;
 }
 
 // Removes duplicates by setting distances to +infinity.

@@ -170,6 +170,18 @@ static void enqueueFinAC(cl_command_queue q, size_t height, size_t k,
     fprintf(stderr, "Failed enqueue of copy: %i\n", err), exit(1);
 }
 
+static void fillZeroes(cl_command_queue q, cl_mem m, size_t sz) {
+  static char allZeroes[128];
+  static char init = 1;
+  if(init)
+    memset((void *)allZeroes, 0, 128), init = 0;
+  size_t i;
+  for(i = 256; (i - 1) & sz; i >>= 1);
+  if(clEnqueueFillBuffer(q, m, (void *)allZeroes, i, 0, sz,
+			 0, NULL, NULL) != CL_SUCCESS)
+    fprintf(stderr, "Failed enqueue of zeroing.\n"), exit(1);
+}
+
 #define ska(k, i, o) setKerArg(k, i, sizeof(o), &o)
 
 static void setKerArg(cl_kernel k, cl_uint ai, size_t as, const void *av) {
@@ -371,24 +383,28 @@ static void waitForQueueThenCall(cl_command_queue q,
 #define BUFTYPE(t) cl_mem
 #define relMem clReleaseMemObject
 #define relMemU clReleaseMemObject
-#define MK_BUF_COPY_RW_NA(cont, type, sz, src) \
-    checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR | \
-	      CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz),      \
-	      (void *)src)
-#define MK_BUF_COPY_RO_NA(cont, type, sz, src) \
-    checkedBC(cont, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | \
-		   CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz), \
-		   (void *)src)
-#define MK_BUF_USE_RO_NA(cont, type, sz, src) \
-    checkedBC(cont, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR | \
-		   CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz), \
-		   (void *)src)
-#define MK_BUF_RW_NA(cont, type, sz)			    \
-    checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS, \
-		   sizeof(type) * (sz), NULL)
-#define MK_BUF_RW_RO(cont, type, sz) \
-    checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, \
-		   sizeof(type) * (sz), NULL)
+#define MK_BUF_COPY_RW_NA(cont, type, sz, src)			\
+  checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR |	\
+	    CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz),		\
+	    (void *)src)
+#define MK_BUF_COPY_RO_NA(cont, type, sz, src)			\
+  checkedBC(cont, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR |	\
+	    CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz),		\
+	    (void *)src)
+#define MK_BUF_USE_RO_NA(cont, type, sz, src)			\
+  checkedBC(cont, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR |	\
+	    CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz),		\
+	    (void *)src)
+#define MK_BUF_RW_NA(cont, type, sz)				\
+  checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS,	\
+	    sizeof(type) * (sz), NULL)
+#define MK_BUF_RW_RO(cont, type, sz)				\
+  checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY,	\
+	    sizeof(type) * (sz), NULL)
+#define MK_BUF_RW_WO(cont, type, sz)				\
+  checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY,	\
+	    sizeof(type) * (sz), NULL)
+  
 #define MK_SUBBUF_RO_NA_REG(t, b, o, s) subbuf(b, (o) * sizeof(t), \
 					       (s) * sizeof(t))
 #define TYPE_OF_COMP gpu
