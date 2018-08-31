@@ -369,6 +369,10 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   d_max++;
   if(d_short > d_max)
     d_short = d_max;
+  if(rot_len_before * 2 > d)
+    rot_len_before = d / 2;
+  if(rot_len_after * 2 > d_max)
+    rot_len_after = d_max / 2;
   MAKE_COMMAND_QUEUE(gpu_context, the_gpu, NULL, NULL, q);
   MAKE_COMMAND_QUEUE(gpu_context, the_gpu, NULL, NULL, sq);
   BUFTYPE(ftype) pnts =
