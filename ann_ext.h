@@ -36,10 +36,11 @@
  * then of 1 in order, etc. The return value should either be		  *
  * stored or freed to prevent memory leaks.				  *
 \**************************************************************************/
-extern size_t *precomp(size_t n, size_t k, size_t d, const ftype *points, 
-		       int tries, size_t rots_before, size_t rot_len_before,
-		       size_t rots_after, size_t rot_len_after, save_t *save,
-		       ftype **dists, char use_cpu);			  
+extern size_t *precomp_ext(size_t n, size_t k, size_t d, const ftype *points, 
+			   int tries, size_t rots_before,
+			   size_t rot_len_before,
+			   size_t rots_after, size_t rot_len_after,
+			   save_t *save, ftype **dists, char use_cpu);
 									  
 /*************************************************************************\
  * Computes nearest neighbors of query points. 	       	       	       	 *
@@ -51,6 +52,7 @@ extern size_t *precomp(size_t n, size_t k, size_t d, const ftype *points,
  * 	(those we want to find nearest neighbors of).			 *
  * dists, use_cpu, return value: See precomp.				 *
 \*************************************************************************/
-extern size_t *query(const save_t *save, const ftype *points,		  
-		     size_t ycnt, const ftype *y, ftype **dists, char use_cpu);
+extern size_t *query_ext(const save_t *save, const ftype *points,
+			 size_t ycnt, const ftype *y,
+			 ftype **dists, char use_cpu);
 #endif

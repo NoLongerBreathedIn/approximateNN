@@ -3,3 +3,5 @@
 test_correctness
 time_results
 compare_results
+query
+precomp

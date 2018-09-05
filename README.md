@@ -16,9 +16,14 @@ must be interpolated -- see the makefile for how.)
 
 `ann.c` contains code to allow a user to use either CPU or GPU versions with
 the same function call;
-`ann.h` contains the declarations for `precomp` and `query`,
-as well as a definition of `save_t` (the save data structure)
-and a declaration of a function to free a `save_t`.
+`ann.h` contains the declarations for `precomp` and `query`.
+
+`ann_ext.c` contains code to allow a user to use a separate process to
+do the same as `ann.c`; it is fully compatible.
+`ann_ext.h` contains declarations.
+
+`ann_save.h` contains a definition of `save_t` (the save data structure)
+and a declaration of functions to free, read, and write a `save_t`.
 
 `compare_results.c` is a test to ensure that the OpenCL and pure C versions 
 give the same result.
@@ -32,6 +37,9 @@ give the same result.
 `gpu_comp.h` contains declarations.
 
 `ocl2c.h` is used to convert OpenCL C to regular C.
+
+`precomp.c` is the external process for precomputation.
+`query.c` is the same for querying.
 
 `randNorm.c` is used by the test code to create random numbers with a
 standard normal distribution.

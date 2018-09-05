@@ -382,10 +382,7 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   BUFTYPE(ftype) pnts =
     MK_BUF_COPY_RW_NA(gpu_context, ftype, n * d, points);
   BUFTYPE(ftype) row_sums;
-  if(save != NULL)
-    row_sums = MK_BUF_RW_RO(gpu_context, ftype, (n/2) * d);  
-  else
-    row_sums = MK_BUF_RW_NA(gpu_context, ftype, (n/2) * d);
+  row_sums = MK_BUF_RW_RO(gpu_context, ftype, (n/2) * d);  
   FST_GONLY(add_up_rows, q, d, n, pnts, row_sums);  
   LOOP1(q, divide_by_length(n, row_sums), d);
   LOOP2(q, subtract_off(d, pnts, row_sums), n, d);
