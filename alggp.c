@@ -176,10 +176,11 @@ static void fillZeroes(cl_command_queue q, cl_mem m, size_t sz) {
   if(init)
     memset((void *)allZeroes, 0, 128), init = 0;
   size_t i;
-  for(i = 256; (i - 1) & sz; i >>= 1);
+  for(i = 128; (i - 1) & sz; i >>= 1);
   if(clEnqueueFillBuffer(q, m, (void *)allZeroes, i, 0, sz,
-			 0, NULL, NULL) != CL_SUCCESS)
-    fprintf(stderr, "Failed enqueue of zeroing.\n"), exit(1);
+				0, NULL, NULL) != CL_SUCCESS) {
+    fprintf(stderr, "Failed enqueue of zeroing."), exit(1);
+  }
 }
 
 #define ska(k, i, o) setKerArg(k, i, sizeof(o), &o)
