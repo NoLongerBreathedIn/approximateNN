@@ -127,7 +127,7 @@ void FST_GONLY(walsh, cl_command_queue q,
   if(d == 1)
     return;
   int l = lg(d);
-  for(int i = l - 1; i >= 0; i++) {
+  for(int i = l - 1; i >= 0; i--) {
     size_t r = ~(size_t)0 << (i + 1);
     size_t nth = (w + ~r & r) >> 1;
     LOOP2(q, apply_walsh_step(l, i, rsr, a), n, nth);
