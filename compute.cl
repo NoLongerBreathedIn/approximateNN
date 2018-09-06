@@ -106,9 +106,9 @@ __kernel void apply_walsh_step(const cpu_size_t lheight,
 			       const ftype rsr,
 			       __global ftype *a) {
   size_t x = get_global_id(0) << lheight, y = get_global_id(1);
-  size_t yh = (y >> step) << step;
-  size_t yl = y ^ yh;
-  size_t ca = x | yh << 1 | yl;
+  size_t yl = y & (1 << step) - 1;
+  size_t yh = (y ^ yl) << 1;
+  size_t ca = x | yh | yl;
   size_t cb = ca | 1 << step;
   ftype alpha = a[ca], beta = a[cb];
   a[ca] = (alpha + beta) / (step % 2 + 1);
@@ -179,12 +179,12 @@ __kernel void sort_two_step(const cpu_size_t count,
 			    __global cpu_size_t *along,
 			    __global ftype *order) {
   size_t x = get_global_id(0) * count, y = get_global_id(1);
-  size_t y_high = (y >> sstep) << sstep;
-  size_t y_low = y ^ y_high;
-  size_t y_b = y_high << 1 | 1 << sstep | y_low;
+  size_t y_low = y & (1 << sstep) - 1;
+  size_t y_high = (y ^ y_low) << 1;
+  size_t y_b = y_high | 1 << sstep | y_low;
   if(sstep == step)
     y_low = (1 << sstep) - y_low - 1;
-  size_t y_a = y_high << 1 | y_low;
+  size_t y_a = y_high | y_low;
   size_t alpha = x + y_a;
   size_t beta = x + y_b;
   ftype ao = order[alpha], bo = order[beta];
