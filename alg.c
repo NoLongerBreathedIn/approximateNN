@@ -130,6 +130,9 @@ void FST_GONLY(walsh, cl_command_queue q,
   for(int i = l - 1; i >= 0; i--) {
     size_t r = ~(size_t)0 << (i + 1);
     size_t nth = (w + ~r & r) >> 1;
+    // The idea here is that due to the order,
+    // we can efficiently figure out which iterations we need to do
+    // to find the first w coordinates at the end.
     LOOP2(q, apply_walsh_step(l, i, rsr, a), n, nth);
   }
 }
@@ -155,6 +158,13 @@ void FST_GONLY(do_sort, cl_command_queue q, size_t k, size_t n,
   size_t yms[lk];
   for(int s = 0; s < lk; s++)
     yms[s] = (k >> (s + 1)) << s | (k & (1 << s) - 1 & -(k >> s & 1));
+  // This crazy expression computes the maximum y (plus 1) such that,
+  // if yl = y & (1 << s) - 1, yh = y ^ yl,
+  // (y_high << 1 | 1 << s | yl) < k.
+  // Basically, we want either k >> 1 & ~((1 << s) - 1),
+  // or that inclusive or k & ((1 << s) - 1).
+  // We want the latter if k >> s is odd.
+  // Hence the work. Oi.
   for(int s = 0; s < lk; s++)
     for(int ss = s; ss >= 0; ss--)
       LOOP2(q, sort_two_step(k, s, ss, along, order), n, yms[ss]);

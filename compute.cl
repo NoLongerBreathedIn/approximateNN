@@ -165,7 +165,7 @@ __kernel void add_cols_step(const cpu_size_t height,
 }
 
 // Sorting:
-// nth = ceil(lg(k)) - 1;
+// nth = maximum to prevent overflow (don't ask)
 // for(s = 0; (k - 1) >> s; s++)
 //   for(ss = s; ss >= 0; ss--)
 //     sort_two_step(k, n, s, ss, along, order)(n, nth);
