@@ -14,7 +14,7 @@
  *========================================================*/
 
 #include "mex.h"
-#include "ann.h"
+#include "ann_ext.h"
 
 
 /* The gateway function */
@@ -67,7 +67,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 #endif
   
   /* call the computational routine */
-  Idx = precomp(n, k, d, inMatrix, 
+  Idx = precomp_ext(n, k, d, inMatrix, 
 		tries, rots_before, rot_len_before,
 		rots_after, rot_len_after, save,
 		&Dis, use_cpu);
@@ -96,6 +96,5 @@ void mexFunction(int nlhs, mxArray *plhs[],
   mxSetData(plhs[0], Idx);
 #endif
   free(Dis);
-  free(Idx);
-  
+  free(Idx);  
 }
