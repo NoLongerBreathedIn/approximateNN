@@ -2,54 +2,62 @@
 #include <stdlib.h>
 #include "ann.h"
 
-// Arguments should be in the order:
-// n k d t rb rlb ra rla use_cpu data results dists save
-// Last two are optional.
-// Last four are filenames, rest are integers.
+#define readstdin(x) fread(&(x), sizeof(x), 1, stdin)
+
+// Arguments:
+// results dists save (all filenames)
+// Reads from stdin:
+// n k d t rb rlb ra rla use_cpu data
+// Types: size_t, except t is int, use_cpu is char, data is array of ftype
 int main(int argc, char **argv) {
-  if(argc < 12)
+  if(argc < 2)
     exit(1);
   size_t n, k, d, rb, rlb, ra, rla;
   char ucpu;
   int t;
-  n = atol(argv[1]);
-  k = atol(argv[2]);
-  d = atol(argv[3]);
-  t = atoi(argv[4]);
-  rb = atol(argv[5]);
-  rlb = atol(argv[6]);
-  ra = atol(argv[7]);
-  rla = atol(argv[8]);
-  ucpu = atoi(argv[9]);
-  FILE *data_f = fopen(argv[10], "rb");
-  FILE *results_f = fopen(argv[11], "wb");
-  FILE *dists_f = NULL;
-  FILE *save_f = NULL;
-  save_t save, *save_p = NULL;
-  ftype *dists, **dists_p = NULL;
-  if(argc > 12) {
-    dists_f = fopen(argv[12], "wb"), dists_p = &dists;
-    if(argc > 13)
-      save_f = fopen(argv[13], "wb"), save_p = &save;
-  }
+  
+  readstdin(n);
+  readstdin(k);
+  readstdin(d);
+  readstdin(t);
+  readstdin(rb);
+  readstdin(rlb);
+  readstdin(ra);
+  readstdin(rla);
+  readstdin(ucpu);
+
+  save_t save;
+  ftype *dists;
   ftype *data = malloc(sizeof(ftype) * n * d);
-  fread(data, sizeof(ftype), n * d, data_f);
-  fclose(data_f);
+  fread(data, sizeof(ftype), n * d, stdin);
   size_t *results = precomp(n, k, d, data, t, rb, rlb, ra, rla,
-			    save_p, dists_p, ucpu);
+			    argc > 3? &save : NULL,
+			    argc > 2? &dists : NULL, ucpu);
   free(data);
-  fwrite(results, sizeof(size_t), n * k, results_f);
-  fclose(results_f);
+  FILE *f = fopen(argv[1], "wb");
+  if(f == NULL)
+    return(1);
+  if(fwrite(results, sizeof(size_t), n * k, f) != n * k)
+    return(1);
+  fclose(f);
   free(results);
   
-  if(argc > 12) {
-    fwrite(dists, sizeof(ftype), n * k, dists_f);
-    fclose(dists_f);
+  if(argc > 2) {
+    f = fopen(argv[2], "wb");
+    if(f == NULL)
+      return(1);
+    if(fwrite(dists, sizeof(ftype), n * k, f) != n * k)
+      return(1);
+    fclose(f);
     free(dists);
-    if(argc > 13) {
-      write_save(&save, save_f);
-      fclose(save_f);
+    if(argc > 3) {
+      f = fopen(argv[3], "wb");
+      if(f == NULL)
+	return(1);
+      char c = write_save(&save, f);
+      fclose(f);
       free_save(&save);
+      return(c);
     }
   }
 }

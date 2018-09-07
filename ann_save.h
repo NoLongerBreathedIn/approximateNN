@@ -12,9 +12,9 @@ typedef struct {
 
 // Frees a save data structure.
 extern void free_save(save_t *save);
-// Write a save data structure to a file
-extern void write_save(const save_t *save, FILE *f);
-// Reads a save data structure from a file
-extern void read_save(save_t *save, FILE *f);
+// Write a save data structure to a file; returns 1 if error, 0 else.
+extern char write_save(const save_t *save, FILE *f);
+// Reads a save data structure from a file; returns 1 if error, 0 else.
+extern char read_save(save_t *save, FILE *f);
 
 #endif
