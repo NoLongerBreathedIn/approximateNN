@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "ann_ext.h"
 #include <string.h>
 #include <stdlib.h>
@@ -12,9 +13,9 @@ static char *dirend = NULL;
 
 static void compdir(void) {
   if(dir == NULL) {
-    size_t s = strlen(__FILE__)
+    size_t s = strlen(__FILE__);
     dir = malloc(s + 1);
-    strcpy(dir, s);
+    strcpy(dir, __FILE__);
     char *f = dir + s;
     while(*f != '/') f--;
     dirend = f + 1;
@@ -37,11 +38,12 @@ size_t *precomp_ext(size_t n, size_t k, size_t d, const ftype *points,
   strcpy(args[3], "saveXXXXXX");
   args[4] = NULL;
   int pp[2];
-  if(pipe2(pp, O_CLOEXEC) = -1) {
+  if(pipe2(pp, O_CLOEXEC) == -1) {
     for(int i = 1; i < 4; i++)
       free(args[i]);
     return(NULL);
   }
+    
   int fs[3];
   for(int i = 0; i < 3; i++)
     fs[i] = mkostemp(args[i + 1], O_CLOEXEC);
@@ -111,7 +113,7 @@ size_t *query_ext(const save_t *save, const ftype *points,
   strcpy(args[2], "distXXXXXX");
   args[3] = NULL;
   int pp[2];
-  if(pipe2(pp, O_CLOEXEC) = -1) {
+  if(pipe2(pp, O_CLOEXEC) == -1) {
     for(int i = 1; i < 3; i++)
       free(args[i]);
     return(NULL);
@@ -131,7 +133,7 @@ size_t *query_ext(const save_t *save, const ftype *points,
   }
   close(pp[0]);
   FILE *f = fdopen(pp[1], "wb");
-  write_save(&save, f);
+  write_save(save, f);
   fwrite(points, sizeof(ftype), save->n * save->d_long, f);
   write_obj(ycnt, f);
   fwrite(y, sizeof(ftype), ycnt * save->d_long, f);

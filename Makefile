@@ -20,7 +20,7 @@ endif
 
 .PHONY: clean
 
-all: $(EFILES)
+all: $(EFILES) ann_ext.o
 clean: 
 	rm -rf $(EFILES) $(OFILES) *.dSYM
 
