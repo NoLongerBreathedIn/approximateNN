@@ -2,7 +2,7 @@ TEST_EFILES := time_results test_correctness
 
 RUN_EFILES := precomp query
 EFILES := $(TEST_EFILES) $(RUN_EFILES)
-LIB_OFILES := algc.o rand_pr.o ann.o
+LIB_OFILES := algc.o rand_pr.o ann.o ann_save.o
 TEST_OFILES := time_results.o test_correctness.o
 RUN_OFILES := precomp.o query.o
 OFILES := $(LIB_OFILES) randNorm.o $(TEST_OFILES) $(RUN_OFILES)
@@ -19,7 +19,7 @@ endif
 
 .PHONY: clean
 
-all: $(EFILES)
+all: $(EFILES) ann_ext.o
 clean: 
 	rm -rf $(EFILES) $(OFILES) *.dSYM
 
