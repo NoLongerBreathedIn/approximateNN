@@ -9,12 +9,12 @@
 #include <sys/wait.h>
 
 #ifdef OSX
-
+#include <errno.h>
 int pipe2(int fd[2], int flags) {
   int tmp[2];
   tmp[0] = fd[0];
   tmp[1] = fd[1];
-  if ((flags & ~(O_CLOEXEC | O_NONBLOCK | O_BINARY | O_TEXT)) != 0) {
+  if ((flags & ~(O_CLOEXEC | O_NONBLOCK)) != 0) {
     errno = EINVAL;
     return(-1);
   }
