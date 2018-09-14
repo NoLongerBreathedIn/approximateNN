@@ -49,10 +49,10 @@ test_correctness: test_correctness.o $(LIB_OFILES) randNorm.o
 	cc -o $@ $^ -lm
 
 precomp: precomp.o $(LIB_OFILES)
-	cc -o $@ $^ -lOpenCL -lm
+	cc -o $@ $^ -lm
 
 query: query.o $(LIB_OFILES)
-	cc -o $@ $^ -lOpenCL -lm
+	cc -o $@ $^ -lm
 
 .INTERMEDIATE: $(FAKE_HFILES)
 
