@@ -4,7 +4,7 @@ EFILES := $(TEST_EFILES) compare_results $(RUN_EFILES)
 LIB_OFILES := algc.o rand_pr.o ann.o gpu_comp.o algg.o ann_save.o
 TEST_OFILES := time_results.o test_correctness.o compare_results.o
 RUN_OFILES := precomp.o query.o
-OFILES := $(LIB_OFILES) randNorm.o $(TEST_OFILES) $(RUN_OFILES)
+OFILES := $(LIB_OFILES) randNorm.o $(TEST_OFILES) $(RUN_OFILES) ann_ext.o
 FAKE_FILES := time_results.h test_correctness.h compare_results.h algg.c \
 	precomp.h query.h
 WARNS := -Wall -Wextra -Wpedantic -Wno-unused-parameter
