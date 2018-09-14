@@ -8,6 +8,39 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+#ifdef OSX
+
+int pipe2(int fd[2], int flags) {
+  int tmp[2];
+  tmp[0] = fd[0];
+  tmp[1] = fd[1];
+  if ((flags & ~(O_CLOEXEC | O_NONBLOCK | O_BINARY | O_TEXT)) != 0) {
+    errno = EINVAL;
+    return(-1);
+  }
+  if(pipe(fd) < 0)
+    return(-1);
+  flags &= O_NONBLOCK | O_CLOEXEC;
+  if(flags) {
+    int fcntl_flags;
+    if((fcntl_flags = fcntl(fd[1], F_GETFD, 0)) < 0 ||
+       fcntl(fd[1], F_SETFD, fcntl_flags | flags) == -1 ||
+       (fcntl_flags = fcntl(fd[0], F_GETFD, 0)) < 0 ||
+       fcntl(fd[0], F_SETFD, fcntl_flags | flags) == -1) {
+      int saved_errno = errno;
+      close(fd[0]);
+      close(fd[1]);
+      fd[0] = tmp[0];
+      fd[1] = tmp[1];
+      errno = saved_errno;
+      return(-1);
+    }
+  }
+  return(0);
+}
+
+#endif
+
 static char *dir = NULL;
 static char *dirend = NULL;
 
