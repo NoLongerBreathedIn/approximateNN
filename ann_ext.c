@@ -149,16 +149,16 @@ size_t *query_ext(const save_t *save, const ftype *points,
   }
   
   size_t *results = malloc(sizeof(size_t) * ycnt * save->k);
-  f = fdopen(fs[1], "rb");
+  f = fdopen(fs[0], "rb");
   fread(results, sizeof(size_t), ycnt * save->k, f);
   fclose(f);
   if(dists != NULL) {
     *dists = malloc(sizeof(ftype) * ycnt * save->k);
-    f = fdopen(fs[2], "rb");
+    f = fdopen(fs[1], "rb");
     fread(*dists, sizeof(ftype), ycnt * save->k, f);
     fclose(f);
   } else
-    close(fs[2]);
+    close(fs[1]);
   for(int i = 1; i < 3; i++)
     unlink(args[i]), free(args[i]);
   return(results);
