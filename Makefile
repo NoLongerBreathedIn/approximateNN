@@ -9,6 +9,7 @@ FAKE_FILES := time_results.h test_correctness.h compare_results.h algg.c \
 	precomp.h query.h
 WARNS := -Wall -Wextra -Wpedantic -Wno-unused-parameter
 OS := $(shell uname -s)
+DIR := $(shell pwd)
 # Put in -DSUPPORT_OPENCL_V1_2 here if using old OpenCL.
 OCL_OPT := 
 
@@ -40,7 +41,7 @@ ann.o: algc.h algg.h
 algc.h algg.h: ann.h
 	touch $@
 
-ann.h: ann_save.h
+ann.h ann_ext.h: ann_save.h
 	touch $@
 
 ann_save.h: ftype.h
@@ -73,7 +74,7 @@ $(filter %.h,$(FAKE_FILES)): %.h:
 	touch $@
 
 $(OFILES): %.o: %.c %.h ftype.h
-	clang -c -g $(OSOPT) $(OCL_OPT) $(WARNS) $<
+	clang -c -g -DDIR="\"$(DIR)\"" $(OSOPT) $(OCL_OPT) $(WARNS) $<
 # CC will complain about sign comparisons where one side is unsigned var
 # and other side is positive int literal.
 # Clang won't.

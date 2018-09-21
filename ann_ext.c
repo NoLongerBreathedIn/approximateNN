@@ -46,12 +46,11 @@ static char *dirend = NULL;
 
 static void compdir(void) {
   if(dir == NULL) {
-    size_t s = strlen(__FILE__);
-    dir = malloc(s + 1);
-    strcpy(dir, __FILE__);
-    char *f = dir + s;
-    while(*f != '/') f--;
-    dirend = f + 1;
+    size_t s = strlen(DIR);
+    dir = malloc(s + 10);
+    strcpy(dir, DIR);
+    dir[s] = '/';
+    dirend = dir + s + 1;
   }
 }
 
