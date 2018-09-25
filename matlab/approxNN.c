@@ -72,15 +72,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
 		rots_after, rot_len_after, save,
 		&Dis, use_cpu);
     /* create the output matrix */
+  if(Idx == null)
+    mexPrintf("Something went wrong.\n"), return;
   
   plhs[0] = mxCreateNumericMatrix(k, n,
 				  sizeof(size_t) == 8?
 				  mxUINT64_CLASS : mxUINT32_CLASS, mxREAL);
   plhs[1] = mxCreateDoubleMatrix(k, n, mxREAL);
   
-  mexPrintf("%d\n", Idx[10]);
-  mexPrintf("%f\n", Dis[10]);
-
   // Stupid Matlab starts array indices from 1, WTF?
   for(int i = 0; i < k * n; i++)
     Idx[i]++;
@@ -95,6 +94,4 @@ void mexFunction(int nlhs, mxArray *plhs[],
   mxSetPr(plhs[1], Dis);
   mxSetData(plhs[0], Idx);
 #endif
-  free(Dis);
-  free(Idx);  
 }
