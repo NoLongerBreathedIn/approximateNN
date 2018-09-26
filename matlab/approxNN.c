@@ -14,7 +14,8 @@
  *========================================================*/
 
 #include "mex.h"
-#include "ann_ext.h"
+#include <string.h>
+#include "../ann_ext.h"
 
 
 /* The gateway function */
@@ -72,7 +73,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 		rots_after, rot_len_after, save,
 		&Dis, use_cpu);
     /* create the output matrix */
-  if(Idx == null)
+  if(Idx == NULL)
     mexPrintf("Something went wrong.\n"), return;
   
   plhs[0] = mxCreateNumericMatrix(k, n,
