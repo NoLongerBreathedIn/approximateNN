@@ -85,13 +85,9 @@ void mexFunction(int nlhs, mxArray *plhs[],
     Idx[i]++;
   
 #if MX_HAS_INTERLEAVED_COMPLEX
-  mxSetDoubles(plhs[1], Dis);
-  if(sizeof(size_t) == 8)
-    mxSetUint64s(plhs[0], Idx);
-  else
-    mxSetUint32s(plhs[0], Idx);
-#else
-  mxSetPr(plhs[1], Dis);
-  mxSetData(plhs[0], Idx);
+#define mxGetPr mxGetDoubles
 #endif
+  memcpy(mxGetPr(plhs[1]), Dis, sizeof(double) * k * n);
+  memcpy(mxGetData(plhs[0]), Idx, sizeof(size_t) * k * n);
+  free(Idx);
 }
