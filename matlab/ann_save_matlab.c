@@ -1,9 +1,10 @@
 #include "ann_save_matlab.h"
+#include <string.h>
 #if MX_HAS_INTERLEAVED_COMPLEX
 #define mxGetPr mxGetDoubles
 #endif
 
-static const char **names = {"which_par", "row_means", "bases", "graph"};
+static const char *names[] = {"which_par", "row_means", "bases", "graph"};
 
 static mxClassID size_t_class = mxDOUBLE_CLASS;
 
@@ -26,13 +27,13 @@ mxArray *save_to_matlab(const save_t *save) {
 						   mxDOUBLE_CLASS, mxREAL);
   memcpy(mxGetPr(row_means), save->row_means, sizeof(double) * save->d_long);
   mxSetFieldByNumber(sstruct, 0, 1, row_means);
-  size_t *bases_size = {save->d_long, save->d_short, save->tries};
+  size_t bases_size[] = {save->d_long, save->d_short, save->tries};
   mxArray *bases = mxCreateUninitNumericArray(3, bases_size,
 					      mxDOUBLE_CLASS, mxREAL);
   memcpy(mxGetPr(bases), save->bases,
 	 sizeof(double) * save->d_long * save->d_short * save->tries);
   mxSetFieldByNumber(sstruct, 0, 2, bases);
-  size_t *graph_size = {save->d_long, save->k, save->n};
+  size_t graph_size[] = {save->d_long, save->k, save->n};
   mxArray *graph = mxCreateUninitNumericArray(3, graph_size,
 					      size_t_class, mxREAL);
   memcpy(mxGetData(graph), save->graph,
