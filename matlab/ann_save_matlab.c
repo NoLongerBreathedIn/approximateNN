@@ -6,12 +6,10 @@
 
 static const char *names[] = {"which_par", "row_means", "bases", "graph"};
 
-static mxClassID size_t_class = mxDOUBLE_CLASS;
+#define size_t_class (sizeof(size_t) == 8? mxUINT64_CLASS : mxUINT32_CLASS)
 
 
 mxArray *save_to_matlab(const save_t *save) {
-  if(size_t_class == mxDOUBLE_CLASS)
-    size_t_class = sizeof(size_t) == 8? mxUINT64_CLASS : mxUINT32_CLASS;
   mxArray *sstruct = mxCreateStructMatrix(1, 1, 4, names);
   mxArray *which_par = mxCreateCellMatrix(save->tries, 1);
   for(int i = 0; i < save->tries; i++) {
@@ -42,29 +40,25 @@ mxArray *save_to_matlab(const save_t *save) {
 }
 
 #define checked_malloc(p, t, c) \
-  if(((p) = malloc(sizeof(t) * (c))) == NULL) return(0)
+  if(((p) = malloc(sizeof(t) * (c))) == NULL) return(2)
 
 static char int_retrieve(save_t *save, mxArray *stuff) {
-  if(size_t_class == mxDOUBLE_CLASS)
-    size_t_class = sizeof(size_t) == 8? mxUINT64_CLASS : mxUINT32_CLASS;
   if(!(mxIsStruct(stuff) && mxIsScalar(stuff)))
-    return(0);
+    return(1);
   mxArray *row_means = mxGetField(stuff, 0, "row_means");
-  if(row_means == NULL || !mxIsDouble(row_means) ||
+  if(row_means == NULL || !mxIsDouble(row_means) || mxIsComplex(row_means) ||
      mxGetNumberOfDimensions(row_means) != 2 ||
-     mxGetDimensions(row_means)[1] != 1 ||
-     mxIsComplex(row_means))
-    return(0);
+     mxGetN(row_means) != 1)
+    return(1);
   checked_malloc(save->row_means, double,
-		 save->d_long = mxGetDimensions(row_means)[0]);
+		 save->d_long = mxGetM(row_means));
   memcpy(save->row_means, mxGetPr(row_means),
 	 sizeof(double) * save->d_long);
   mxArray *bases = mxGetField(stuff, 0, "bases");
-  if(bases == NULL || !mxIsDouble(bases) ||
+  if(bases == NULL || !mxIsDouble(bases) || mxIsComplex(bases) ||
      mxGetNumberOfDimensions(bases) != 3 ||
-     mxIsComplex(bases) ||
-     mxGetDimensions(bases)[0] != save->d_long)
-    return(0);
+     mxGetM(bases) != save->d_long)
+    return(1);
   save->d_short = mxGetDimensions(bases)[1];
   save->tries = mxGetDimensions(bases)[2];
   checked_malloc(save->bases, double,
@@ -74,9 +68,9 @@ static char int_retrieve(save_t *save, mxArray *stuff) {
   mxArray *which_par = mxGetField(stuff, 0, "which_par");
   if(which_par == NULL || !mxIsCell(which_par) ||
      mxGetNumberOfDimensions(which_par) != 2 ||
-     mxGetDimensions(which_par)[0] != save->tries ||
-     mxGetDimensions(which_par)[1] != 1)
-    return(0);
+     mxGetM(which_par) != save->tries ||
+     mxGetN(which_par) != 1)
+    return(1);
   checked_malloc(save->which_par, size_t *, save->tries);
   for(int i = 0; i < save->tries; i++)
     save->which_par[i] = NULL;
@@ -84,11 +78,11 @@ static char int_retrieve(save_t *save, mxArray *stuff) {
   for(int i = 0; i < save->tries; i++) {
     mxArray *par_spot = mxGetCell(which_par, i);
     if(par_spot == NULL || mxGetClassID(par_spot) != size_t_class ||
-       mxGetNumberOfDimensions(par_spot) != 2 ||
        mxIsComplex(par_spot) ||
-       mxGetDimensions(par_spot)[0] != (1 << save->d_short))
-      return(0);
-    save->par_maxes[i] = mxGetDimensions(par_spot)[1];
+       mxGetNumberOfDimensions(par_spot) != 2 ||
+       mxGetM(par_spot) != (1 << save->d_short))
+      return(1);
+    save->par_maxes[i] = mxGetN(par_spot);
     checked_malloc(save->which_par[i], size_t,
 		   save->par_maxes[i] << save->d_short);
     memcpy(save->which_par[i], mxGetData(par_spot),
@@ -98,14 +92,14 @@ static char int_retrieve(save_t *save, mxArray *stuff) {
   if(graph == NULL || mxGetClassID(graph) != size_t_class ||
      mxIsComplex(graph) ||
      mxGetNumberOfDimensions(graph) != 3 ||
-     mxGetDimensions(graph)[0] != save->d_long)
-    return(0);
+     mxGetM(graph) != save->d_long)
+    return(1);
   save->k = mxGetDimensions(graph)[1];
   save->n = mxGetDimensions(graph)[2];
   checked_malloc(save->graph, size_t, save->d_long * save->k * save->n);
   memcpy(save->graph, mxGetData(graph),
 	 sizeof(double) * save->d_long * save->k * save->n);
-  return(1);
+  return(0);
 }
 
 #define free_safe(p) if(p != NULL) free(p)
@@ -115,7 +109,7 @@ char retrieve_from_matlab(save_t *save, mxArray *stuff) {
   save->which_par = NULL;
   save->row_means = save->bases = NULL;
   char c = int_retrieve(save, stuff);
-  if(!c) {
+  if(c) {
     free_safe(save->bases);
     free_safe(save->row_means);
     if(save->which_par != NULL)

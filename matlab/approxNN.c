@@ -18,6 +18,9 @@
 #include "ann_save_matlab.h"
 #include "../ann_ext.h"
 
+#if MX_HAS_INTERLEAVED_COMPLEX
+#define mxGetPr mxGetDoubles
+#endif
 
 /* The gateway function */
 void mexFunction(int nlhs, mxArray *plhs[],
@@ -35,24 +38,32 @@ void mexFunction(int nlhs, mxArray *plhs[],
   size_t rots_after=1;
   size_t rot_len_after=1; 
   save_t save;
-  char use_cpu=1;
+  char use_cpu=0;
             
   /* check for proper number of arguments */
-  if(nrhs!=2)
+  if(nrhs!=2) {
     mexErrMsgIdAndTxt("approxNN:precomp:nrhs", "Two inputs required.");
-  if(nlhs < 2 || nlhs > 3)
+    return;
+  }
+  if(nlhs < 2 || nlhs > 3) {
     mexErrMsgIdAndTxt("approxNN:precomp:nlhs",
 		      "Only two or three outputs allowed.");
+    return;
+  }
   
   /* make sure the first input argument is type double */
-  if(!mxIsDouble(prhs[0]) || mxIsComplex(prhs[0]))
+  if(!mxIsDouble(prhs[0]) || mxIsComplex(prhs[0])) {
     mexErrMsgIdAndTxt("approxNN:precomp:notDouble",
 		      "Input matrix must be type double.");
+    return;
+  }
   /* make sure the second input argument is scalar */
   if(!mxIsNumeric(prhs[1]) || mxIsComplex(prhs[1])
-     || !mxIsScalar(prhs[1]))
+     || !mxIsScalar(prhs[1])) {
     mexErrMsgIdAndTxt("approxNN:precomp:notScalar",
 		      "Input k must be a numeric scalar.");
+    return;
+  }
   
   /* get the value of the scalar input  */
   n = mxGetN(prhs[0]);
@@ -60,11 +71,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
   d = mxGetM(prhs[0]);
   
   /* create a pointer to the real data in the input matrix  */
-#if MX_HAS_INTERLEAVED_COMPLEX
-  inMatrix = mxGetDoubles(prhs[0]);
-#else
   inMatrix = mxGetPr(prhs[0]);
-#endif
   
   /* call the computational routine */
   Idx = precomp_ext(n, k, d, inMatrix, 
@@ -72,20 +79,21 @@ void mexFunction(int nlhs, mxArray *plhs[],
 		    rots_after, rot_len_after, nlhs == 3? &save : NULL,
 		    nlhs == 1? NULL : &Dis, use_cpu);
     /* create the output matrix */
-  if(Idx == NULL)
-    mexPrintf("Something went wrong.\n"), return;
+  if(Idx == NULL) {
+    mexErrMsgIdAndTxt("approxNN:precomp:error",
+		      "Something's gone wrong, it didn't work.");
+    return;
+  }
   
   plhs[1] = mxCreateUninitNumericMatrix(k, n,
 					sizeof(size_t) == 8?
 					mxUINT64_CLASS : mxUINT32_CLASS,
-					mxREAL);  
+					mxREAL);
+  size_t *foo = mxGetData(plhs[1]);
   // Stupid Matlab starts array indices from 1, WTF?
   for(int i = 0; i < k * n; i++)
-    Idx[i]++;
+    foo[i] = Idx[i] + 1;
   
-#if MX_HAS_INTERLEAVED_COMPLEX
-#define mxGetPr mxGetDoubles
-#endif
   memcpy(mxGetData(plhs[1]), Idx, sizeof(size_t) * k * n);
   free(Idx);
   plhs[0] = mxCreateUninitNumericMatrix(k, n, mxDOUBLE_CLASS, mxREAL);
