@@ -19,7 +19,7 @@ mxArray *save_to_matlab(const save_t *save) {
       mxCreateUninitNumericMatrix(1 << save->d_short, save->par_maxes[i],
 				  size_t_class, mxREAL);
     memcpy(mxGetData(par_spot), save->which_par[i],
-	   sizeof(size_t) * save->par_maxes[i] << d_short);
+	   sizeof(size_t) * save->par_maxes[i] << save->d_short);
     mxSetCell(which_par, i, par_spot);
   }
   mxSetFieldByNumber(sstruct, 0, 0, which_par);
@@ -63,7 +63,7 @@ static char int_retrieve(save_t *save, mxArray *stuff) {
   if(bases == NULL || !mxIsDouble(bases) ||
      mxGetNumberOfDimensions(bases) != 3 ||
      mxIsComplex(bases) ||
-     mxGetDimensions(bases)[0] != d_long)
+     mxGetDimensions(bases)[0] != save->d_long)
     return(0);
   save->d_short = mxGetDimensions(bases)[1];
   save->tries = mxGetDimensions(bases)[2];
