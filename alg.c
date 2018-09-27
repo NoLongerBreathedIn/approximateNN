@@ -209,35 +209,27 @@ void TWO_GONLY(run_initial, cl_context c, cl_command_queue q,
 // on the basis vectors of the output (I.E., the input represents the
 // d_high by d_low matrix M, we want M^T)
 // and saves the results to the location given in loc.
-void TWO_GONLY(save_vecs, cl_context c, cl_command_queue q,
+void FST_GONLY(save_vecs, cl_command_queue q,
 	       size_t d_low, size_t d_high, size_t d_max,
 	       size_t rots_b, size_t rot_len_b,
 	       size_t rots_a, size_t rot_len_a,
-	       const ortho_info *o, ftype *loc) {
-  ftype *vcs = malloc(sizeof(ftype) * d_low * d_low);
-  for(size_t i = 0; i < d_low; i++)
-    for(size_t j = 0; j < d_low; j++)
-      vcs[i * d_low + j] = i == j;
-  BUFTYPE(ftype) vecs = MK_BUF_COPY_RO_NA(c, ftype, d_low * d_low, vcs);
-  free(vcs);
+	       const ortho_info *o, ftype *loc,
+	       const ftype *vcs,
+	       BUFTYPE(ftype) vecs, BUFTYPE(ftype) vecs2) {
+  enqueueWriteBuf(q, sizeof(ftype) * d_low * d_low, vcs, vecs);
   for(long i = rots_a - 1; i >= 0; i--)
     LOOP2(q, apply_rotation(d_low, o->ra.js[i], o->ra.is[i], o->ra.as[i],
 			    vecs), d_low, rot_len_a);
-  BUFTYPE(ftype) vecs2 = MK_BUF_RW_WO(c, ftype, d_low * d_max);
   fillZeroes(q, vecs2, d_low * d_max * sizeof(ftype));
   LOOP2(q, apply_permutation(d_low, d_max, o->perm_ai, vecs, vecs2),
 	    d_low, d_low);
-  relMem(vecs);
   FST_GONLY(walsh, q, d_max, d_low, d_max, vecs2);
-  vecs = MK_BUF_RW_RO(c, ftype, d_low * d_high);
   LOOP2(q, apply_perm_inv(d_max, d_high, o->perm_b, vecs2, vecs),
 	d_low, d_max);
-  relMem(vecs2);
   for(long i = rots_b - 1; i >= 0; i--)
     LOOP2(q, apply_rotation(d_high, o->rb.js[i], o->rb.is[i], o->rb.as[i],
 			     vecs), d_low, rot_len_b);
   enqueueReadBuf(q, sizeof(ftype) * d_low * d_high, vecs, loc);
-  relMem(vecs);
 }
 
 // Pass it a pair of matrices, both n by k, one of ftypes,
@@ -379,6 +371,9 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   FST_GONLY(add_up_rows, q, d, n, pnts, row_sums);  
   LOOP1(q, divide_by_length(n, row_sums), d);
   LOOP2(q, subtract_off(d, pnts, row_sums), n, d);
+  ftype *svcs;
+  BUFTYPE(ftype) svecs;
+  BUFTYPE(ftype) svecs2;
   if(save != NULL) {
     save->tries = tries;
     save->n = n;
@@ -390,6 +385,12 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
     save->which_par = malloc(sizeof(size_t *) * tries);
     save->par_maxes = malloc(sizeof(size_t) * tries);
     save->bases = malloc(sizeof(ftype) * tries * d_short * d);
+    svcs = malloc(sizeof(ftype) * d_short * d_short);
+    for(size_t i = 0; i < d_short; i++)
+      for(size_t j = 0; j < d_short; j++)
+	svcs[i * d_short + j] = i == j;
+    svecs = MK_BUF_RW_RW(gpu_context, ftype, d_short * d);
+    svecs2 = MK_BUF_RW_WO(gpu_context, ftype, d_short * d_max);
   }
   relMem(row_sums);
   BUFTYPE(size_t) pointers_out =
@@ -411,9 +412,14 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
 	      rots_after, rot_len_after,
 	      inf + i, pnts, sgns + i * n, signs);
     if(save != NULL)
-      TWO_GONLY(save_vecs, gpu_context, sq, d_short, d, d_max,
+      FST_GONLY(save_vecs, sq, d_short, d, d_max,
 		rots_before, rot_len_before, rots_after, rot_len_after,
-		inf + i, save->bases + i * d_short * d);
+		inf + i, save->bases + i * d_short * d, svcs, svecs, svecs2);
+  }
+  if(save != NULL) {
+    free(svcs);
+    relMem(svecs);
+    relMem(svecs2);
   }
   relMem(pnts);
   clFinish(q);
