@@ -156,6 +156,13 @@ static void enqueueReadBuf(cl_command_queue q,
     fprintf(stderr, "Failed enqueue of read.\n"), exit(1);
 }
 
+static void enqueueWriteBuf(cl_command_queue q,
+			    size_t sz, const void *from, cl_mem to) {
+  if(clEnqueueWriteBuffer(q, to, 0, 0, sz, from, 0, NULL, NULL) != CL_SUCCESS)
+    fprintf(stderr, "Failed enqueue of read.\n"), exit(1);
+}
+
+
 static void enqueueFinAC(cl_command_queue q, size_t height, size_t k,
 			 size_t skip, cl_mem from, cl_mem to, size_t n) {
   size_t src_ori[3] = {0, 0, 0};
@@ -399,8 +406,15 @@ static void waitForQueueThenCall(cl_command_queue q,
 #define MK_BUF_RW_NA(cont, type, sz)				\
   checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS,	\
 	    sizeof(type) * (sz), NULL)
+#define MK_BUF_RO_WO(cont, type, sz)				\
+  checkedBC(cont, CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY,	\
+	    sizeof(type) * (sz), NULL)
+
 #define MK_BUF_RW_RO(cont, type, sz)				\
   checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY,	\
+	    sizeof(type) * (sz), NULL)
+#define MK_BUF_RW_RW(cont, type, sz)				\
+  checkedBC(cont, CL_MEM_READ_WRITE,				\
 	    sizeof(type) * (sz), NULL)
 #define MK_BUF_RW_WO(cont, type, sz)				\
   checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY,	\

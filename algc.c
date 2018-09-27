@@ -39,6 +39,7 @@ static void finish_cols(size_t h, size_t k, size_t skip, ftype *mat,
 #define fin_add_cols(q, ...) finish_cols(__VA_ARGS__)
 #define enqueueCopyBuf(q, sz, src, dst) memcpy(dst, src, sz)
 #define enqueueReadBuf(q, sz, src, dst) memcpy(dst, src, sz)
+#define enqueueWriteBuf(q, sz, src, dst) memcpy(dst, src, sz);
 #define enqueueCopy2D(q, t, ...) cp2D(__VA_ARGS__, sizeof(t))
 #define enqueueRead2D(q, t, ...) cp2D(__VA_ARGS__, sizeof(t))
 #define BUFTYPE(t) t *
@@ -50,11 +51,14 @@ static void finish_cols(size_t h, size_t k, size_t skip, ftype *mat,
 #define MK_BUF_RW_NA(cont, type, sz) MB(type, sz)
 #define MK_BUF_RW_RO(cont, type, sz) MB(type, sz)
 #define MK_BUF_RW_WO(cont, type, sz) MB(type, sz)
+#define MK_BUF_RW_RW(cont, type, sz) MB(type, sz)
+#define MK_BUF_RO_WO(cont, type, sz) MB(type, sz)
 #define MK_SUBBUF_RO_NA_REG(t, b, off, sz) ((b) + (off))
 #define TYPE_OF_COMP cpu
 #define relMem free
 #define relMemU(m)
 #define clFinish(q)
+#define clFlush(q)
 #define clReleaseCommandQueue(q)
 #define waitForQueueThenCall(q, f, a) f(0, 0, a)
 #define OINT char
