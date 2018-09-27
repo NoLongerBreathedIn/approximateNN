@@ -15,6 +15,7 @@
 
 #include "mex.h"
 #include <string.h>
+#include "ann_save_matlab.h"
 #include "../ann_ext.h"
 
 
@@ -31,29 +32,27 @@ void mexFunction(int nlhs, mxArray *plhs[],
   int tries=10; 
   size_t rots_before=1; 
   size_t rot_len_before=6;
-  size_t rots_after=1; 
+  size_t rots_after=1;
   size_t rot_len_after=1; 
-  save_t *save=NULL;
+  save_t save;
   char use_cpu=1;
             
   /* check for proper number of arguments */
   if(nrhs!=2)
     mexErrMsgIdAndTxt("approxNN:precomp:nrhs", "Two inputs required.");
-  if(nlhs!=2)
-    mexErrMsgIdAndTxt("approxNN:precomp:nlhs", "Two outputs required.");
+  if(nlhs < 2 || nlhs > 3)
+    mexErrMsgIdAndTxt("approxNN:precomp:nlhs",
+		      "Only two or three outputs allowed.");
   
   /* make sure the first input argument is type double */
   if(!mxIsDouble(prhs[0]) || mxIsComplex(prhs[0]))
     mexErrMsgIdAndTxt("approxNN:precomp:notDouble",
 		      "Input matrix must be type double.");
   /* make sure the second input argument is scalar */
-  if(!(mxIsDouble(prhs[1]) && !mxIsComplex(prhs[1])
-       && mxGetNumberOfElements(prhs[1]) == 1))
+  if(!mxIsNumeric(prhs[1]) || mxIsComplex(prhs[1])
+     || !mxIsScalar(prhs[1]))
     mexErrMsgIdAndTxt("approxNN:precomp:notScalar",
-		      "Input k must be a scalar.");
-
-  mxDestroyArray(plhs[0]);
-  mxDestroyArray(plhs[1]);
+		      "Input k must be a numeric scalar.");
   
   /* get the value of the scalar input  */
   n = mxGetN(prhs[0]);
@@ -69,18 +68,17 @@ void mexFunction(int nlhs, mxArray *plhs[],
   
   /* call the computational routine */
   Idx = precomp_ext(n, k, d, inMatrix, 
-		tries, rots_before, rot_len_before,
-		rots_after, rot_len_after, save,
-		&Dis, use_cpu);
+		    tries, rots_before, rot_len_before,
+		    rots_after, rot_len_after, nlhs == 3? &save : NULL,
+		    nlhs == 1? NULL : &Dis, use_cpu);
     /* create the output matrix */
   if(Idx == NULL)
     mexPrintf("Something went wrong.\n"), return;
   
-  plhs[0] = mxCreateNumericMatrix(k, n,
-				  sizeof(size_t) == 8?
-				  mxUINT64_CLASS : mxUINT32_CLASS, mxREAL);
-  plhs[1] = mxCreateDoubleMatrix(k, n, mxREAL);
-  
+  plhs[1] = mxCreateUninitNumericMatrix(k, n,
+					sizeof(size_t) == 8?
+					mxUINT64_CLASS : mxUINT32_CLASS,
+					mxREAL);  
   // Stupid Matlab starts array indices from 1, WTF?
   for(int i = 0; i < k * n; i++)
     Idx[i]++;
@@ -88,7 +86,13 @@ void mexFunction(int nlhs, mxArray *plhs[],
 #if MX_HAS_INTERLEAVED_COMPLEX
 #define mxGetPr mxGetDoubles
 #endif
-  memcpy(mxGetPr(plhs[1]), Dis, sizeof(double) * k * n);
-  memcpy(mxGetData(plhs[0]), Idx, sizeof(size_t) * k * n);
+  memcpy(mxGetData(plhs[1]), Idx, sizeof(size_t) * k * n);
   free(Idx);
+  plhs[0] = mxCreateUninitNumericMatrix(k, n, mxDOUBLE_CLASS, mxREAL);
+  memcpy(mxGetPr(plhs[0]), Dis, sizeof(double) * k * n);
+  free(Dis);
+  if(nlhs == 2)
+    return;
+  plhs[3] = save_to_matlab(&save);
+  free_save(&save);
 }
