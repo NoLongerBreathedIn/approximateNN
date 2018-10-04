@@ -6,9 +6,6 @@
 // hack to allow two versions of a function to be defined in separate files
 // with separate names, but only slightly different.
 
-#define rot_info MK_NAME(rot_info_int)
-#define ortho_info MK_NAME(ortho_info_int)
-
 static unsigned lg(size_t d) {
   unsigned r = (d > 0xFFFFFFFF) << 5;
   d >>= r;
@@ -20,17 +17,6 @@ static unsigned lg(size_t d) {
   return(r | s | d >> 1);
 }
 
-typedef struct {
-  BUFTYPE(size_t) *is;
-  BUFTYPE(size_t) *js;
-  BUFTYPE(ftype) *as;
-} rot_info;
-
-typedef struct {
-  rot_info rb, ra;
-  BUFTYPE(size_t) perm_b;
-  BUFTYPE(size_t) perm_ai;
-} ortho_info;
 
 // Hacks to skip first (two) arguments if they are OpenCL types
 #ifndef ocl2c
@@ -44,80 +30,27 @@ typedef struct {
 #define FST_GONLY(x, ...) FST_GONLY_INT(MK_NAME(x), __VA_ARGS__)
 #define TWO_GONLY(x, ...) TWO_GONLY_INT(MK_NAME(x), __VA_ARGS__)
 
-// Make a rot_info and fill it with rotations.
-rot_info FST_GONLY(make_rot_info, cl_context c,
-		   size_t rot_len, size_t rots, size_t dim) {
-  size_t *ri = malloc(sizeof(size_t) * rot_len);
-  size_t *rj = malloc(sizeof(size_t) * rot_len);
-  ftype *ra = malloc(sizeof(ftype) * rot_len);
-  rot_info roti;
-  roti.is = malloc(sizeof(BUFTYPE(size_t)) * rots);
-  roti.js = malloc(sizeof(BUFTYPE(size_t)) * rots);
-  roti.as = malloc(sizeof(BUFTYPE(ftype)) * rots);
-  for(size_t j = 0; j < rots; j++) {
-    rand_rot(rot_len, dim, ri, rj, ra);
-    roti.is[j] = MK_BUF_COPY_RO_NA(c, size_t, rot_len, ri);
-    roti.js[j] = MK_BUF_COPY_RO_NA(c, size_t, rot_len, rj);
-    roti.as[j] = MK_BUF_COPY_RO_NA(c, ftype, rot_len, ra);
-  }
-  free(ri);
-  free(rj);
-  free(ra);
-  return(roti);
+void MK_NAME(mk_rot_inf)(size_t rot_len, size_t rots,
+			 size_t dim, size_t *wkspc, size_t *cout,
+			 ftype *aout) {
+  for(size_t j = 0; j < rots; j++)
+    rand_rot(rot_len, dim, cout + j * 2 * rot_len,
+	     cout + (j * 2 + 1) * rot_len,
+	     aout + j * rot_len, wkspc);
 }
 
-// Make an ortho_info and fill it up with rotations and permutations
-ortho_info FST_GONLY(make_ortho_info, cl_context c,
-		     size_t rot_len_b, size_t rots_b,
-		     size_t rot_len_a, size_t rots_a,
-		     size_t dim_low, size_t dim_high, size_t dim_max) {
-  ortho_info orti;
-  size_t *perm;
-  orti.rb = FST_GONLY(make_rot_info, c, rot_len_b, rots_b, dim_high);
-  orti.ra = FST_GONLY(make_rot_info, c, rot_len_a, rots_a, dim_low);
-  perm = rand_perm(dim_high, dim_max);
-  orti.perm_b = MK_BUF_COPY_RO_NA(c, size_t, dim_max, perm);
-  free(perm);
-  perm = rand_perm(dim_low, dim_low);
-  orti.perm_ai = MK_BUF_COPY_RO_NA(c, size_t, dim_low, perm);
-  free(perm);
-  return(orti);
-}
-
-// Free the contents of a rot_info
-void MK_NAME(free_rot_info) (size_t rots, rot_info r) {
-  for(size_t i = 0; i < rots; i++) {
-    relMem(r.is[i]);
-    relMem(r.js[i]);
-    relMem(r.as[i]);
-  }
-  free(r.is);
-  free(r.js);
-  free(r.as);
-}
-
-// Free the contents of an ortho_info
-void MK_NAME(free_ortho_info) (size_t rots_b, size_t rots_a, ortho_info *o) {
-  MK_NAME(free_rot_info)(rots_b, o->rb);
-  MK_NAME(free_rot_info)(rots_a, o->ra);
-  relMem(o->perm_b);
-  relMem(o->perm_ai);
-}
-
-#define CLEANUP_DATA MK_NAME(cleanup_data)
-
-typedef struct {
-  size_t rots_b, rots_a;
-  ortho_info *o;
-  int tries;
-} CLEANUP_DATA;
-
-// Callback for cleanup of ortho_infos
-void MK_NAME(cleanup)(OEVENT e, OINT i, void *stuff) {
-  CLEANUP_DATA *trash = (CLEANUP_DATA *)stuff;
-  for(int i = 0; i < trash->tries; i++)
-    MK_NAME(free_ortho_info)(trash->rots_b, trash->rots_a, trash->o + i);
-  free(trash->o);
+void MK_NAME(mk_orth_inf)(size_t rot_len_b, size_t rots_b,
+			  size_t rot_len_a, size_t rots_a,
+			  size_t dim_low, size_t dim_high, size_t dim_max,
+			  size_t *wkspc, size_t *cout, ftype *aout) {
+  MK_NAME(mk_rot_inf)(rot_len_b, rots_b, dim_high, wkspc, cout, aout);
+  aout += rot_len_b * rots_b;
+  cout += rot_len_b * rots_b * 2;
+  rand_perm(dim_high, dim_max, cout);
+  cout += dim_max;
+  rand_perm(dim_low, dim_low, cout);
+  cout += dim_low;
+  MK_NAME(mk_rot_inf)(rot_len_a, rots_a, dim_low, wkspc, cout, aout);
 }
 
 void FST_GONLY(walsh, cl_command_queue q,
@@ -170,6 +103,26 @@ void FST_GONLY(do_sort, cl_command_queue q, size_t k, size_t n,
       LOOP2(q, sort_two_step(k, s, ss, along, order), n, yms[ss]);
 }
 
+void FST_GONLY(apply_rot, cl_command_queue q,
+	       size_t n, size_t d, size_t i,
+	       size_t rot_len,
+	       size_t aoff, size_t doff,
+	       BUFTYPE(const ftype) rot_angs,
+	       BUFTYPE(const size_t) ortho_dat,
+	       BUFTYPE(ftype) points, char swap) {
+  BUFTYPE(const ftype) as =
+    MK_SUBBUF_RO_NA_REG(ftype, rot_angs, aoff + i * rot_len, rot_len);
+  BUFTYPE(const size_t) is =
+    MK_SUBBUF_RO_NA_REG(size_t, ortho_dat,
+			doff + (i * 2 + swap) * rot_len, rot_len);
+  BUFTYPE(const size_t) js =
+    MK_SUBBUF_RO_NA_REG(size_t, ortho_dat,
+			doff + (i * 2 + 1 - swap) * rot_len, rot_len);
+  LOOP2(q, apply_rotation(d, is, js, as, points), n, rot_len);
+  relMemU(as);
+  relMemU(is);
+  relMemU(js);
+}
 
 // Performs a random orthogonal operation + projection (supplied),
 // and returns the signs of every provided vector after that op,
@@ -178,30 +131,37 @@ void FST_GONLY(do_sort, cl_command_queue q, size_t k, size_t n,
 // and as a size_t * (sets *sgns to the address thereof).
 // The latter is not guaranteed to have been written to,
 // so wait for the queue you passed in to finish before reading it.
-void TWO_GONLY(run_initial, cl_context c, cl_command_queue q,
+void FST_GONLY(run_initial, cl_command_queue q,
 	       size_t n, size_t d_low,
 	       size_t d_high, size_t d_max,
 	       size_t rots_b, size_t rot_len_b,
 	       size_t rots_a, size_t rot_len_a,
-	       const ortho_info *o, BUFTYPE(ftype) points,
+	       size_t ang_off, size_t d_off,
+	       BUFTYPE(const ftype) rot_angs,
+	       BUFTYPE(const size_t) ortho_dat,
+	       BUFTYPE(ftype) pc,
+	       BUFTYPE(ftype) wkspc,
 	       size_t *sgns, BUFTYPE(size_t) signs) {
-  BUFTYPE(ftype) pc = MK_BUF_RW_NA(c, ftype, n * d_high);
-  enqueueCopyBuf(q, sizeof(ftype) * n * d_high, points, pc);
-  for(size_t i = 0; i < rots_b; i++)   
-    LOOP2(q, apply_rotation(d_high, o->rb.is[i], o->rb.js[i], o->rb.as[i], pc),
-	  n, rot_len_b);
-  BUFTYPE(ftype) pc2 = MK_BUF_RW_NA(c, ftype, n * d_max);
-  LOOP2(q, apply_permutation(d_high, d_max, o->perm_b, pc, pc2), n, d_max);
-  relMem(pc);
-  FST_GONLY(walsh, q, d_max, n, d_low, pc2);
-  pc = MK_BUF_RW_NA(c, ftype, n * d_low);
-  LOOP2(q, apply_perm_inv(d_max, d_low, o->perm_ai, pc2, pc), n, d_low);
+  for(size_t i = 0; i < rots_b; i++)
+    FST_GONLY(apply_rot, q, n, d_high, i, rot_len_b, ang_off, d_off,
+	      rot_angs, ortho_dat, pc, 0);
+  BUFTYPE(const size_t) perm_b =
+    MK_SUBBUF_RO_NA_REG(size_t, ortho_dat, d_off + rots_b * rot_len_b * 2,
+			d_max);
+  LOOP2(q, apply_permutation(d_high, d_max, perm_b, pc, wkspc), n, d_max);
+  relMemU(perm_b);
+  FST_GONLY(walsh, q, d_max, n, d_low, wkspc);
+  BUFTYPE(const size_t) perm_ai =
+    MK_SUBBUF_RO_NA_REG(size_t, ortho_dat,
+			d_off + rots_b * rot_len_b * 2 + d_max, d_low);
+  LOOP2(q, apply_perm_inv(d_max, d_low, perm_ai, wkspc, pc), n, d_low);
+  relMemU(perm_ai);
+  ang_off += rots_b * rot_len_b;
+  d_off += rots_b * rot_len_b * 2 + d_max + d_low;
   for(size_t i = 0; i < rots_a; i++)
-    LOOP2(q, apply_rotation(d_max, o->ra.is[i], o->ra.js[i], o->ra.as[i], pc2),
-	  n, rot_len_a);
-  relMem(pc2);
+    FST_GONLY(apply_rot, q, n, d_low, i, rot_len_a, ang_off, d_off,
+	      rot_angs, ortho_dat, pc, 0);
   LOOP1(q, compute_signs(d_low, pc, signs), n);
-  relMem(pc);
   enqueueReadBuf(q, sizeof(size_t) * n, signs, sgns);
 }
 
@@ -213,22 +173,33 @@ void FST_GONLY(save_vecs, cl_command_queue q,
 	       size_t d_low, size_t d_high, size_t d_max,
 	       size_t rots_b, size_t rot_len_b,
 	       size_t rots_a, size_t rot_len_a,
-	       const ortho_info *o, ftype *loc,
-	       const ftype *vcs,
+	       size_t ang_off, size_t d_off,
+	       BUFTYPE(const ftype) rot_angs,
+	       BUFTYPE(const size_t) ortho_dat,
+	       ftype *loc, const ftype *vcs,
 	       BUFTYPE(ftype) vecs, BUFTYPE(ftype) vecs2) {
   enqueueWriteBuf(q, sizeof(ftype) * d_low * d_low, vcs, vecs);
   for(long i = rots_a - 1; i >= 0; i--)
-    LOOP2(q, apply_rotation(d_low, o->ra.js[i], o->ra.is[i], o->ra.as[i],
-			    vecs), d_low, rot_len_a);
+    FST_GONLY(apply_rot, q, d_low, d_low, i, rot_len_a,
+	      ang_off + rots_b * rot_len_b,
+	      d_off + rots_b * rot_len_b * 2 + d_max + d_low,
+	      rot_angs, ortho_dat, vecs, 1);
   fillZeroes(q, vecs2, d_low * d_max * sizeof(ftype));
-  LOOP2(q, apply_permutation(d_low, d_max, o->perm_ai, vecs, vecs2),
+  BUFTYPE(const size_t) perm_ai =
+    MK_SUBBUF_RO_NA_REG(size_t, ortho_dat,
+			d_off + rots_b * rot_len_b * 2 + d_max, d_low);  
+  LOOP2(q, apply_permutation(d_low, d_max, perm_ai, vecs, vecs2),
 	    d_low, d_low);
+  relMemU(perm_ai);
   FST_GONLY(walsh, q, d_max, d_low, d_max, vecs2);
-  LOOP2(q, apply_perm_inv(d_max, d_high, o->perm_b, vecs2, vecs),
+  BUFTYPE(const size_t) perm_b =
+    MK_SUBBUF_RO_NA_REG(size_t, ortho_dat, d_off + rots_b * rot_len_b * 2,
+			d_max);
+  LOOP2(q, apply_perm_inv(d_max, d_high, perm_b, vecs2, vecs),
 	d_low, d_max);
   for(long i = rots_b - 1; i >= 0; i--)
-    LOOP2(q, apply_rotation(d_high, o->rb.js[i], o->rb.is[i], o->rb.as[i],
-			     vecs), d_low, rot_len_b);
+    FST_GONLY(apply_rot, q, d_low, d_high, i, rot_len_b,
+	      ang_off, d_off, rot_angs, ortho_dat, vecs, 1);
   enqueueReadBuf(q, sizeof(ftype) * d_low * d_high, vecs, loc);
 }
 
@@ -258,10 +229,10 @@ void FST_GONLY(compdists, cl_command_queue q,
 
 // This (a) figures out what the candidates for near neighbors are,
 // and (b) computes the distances and sorts, then returns the k nearest.
-void FST_GONLY(second_half, cl_command_queue q,
+void TWO_GONLY(second_half, cl_context c, cl_command_queue q,
 	       size_t n, size_t k, size_t d_low, size_t d_high,
 	       save_t *save, int i, int tries,
-	       const size_t *sgns, BUFTYPE(size_t) signs,
+	       const size_t *sgns,
 	       size_t *counts, BUFTYPE(size_t) which,
 	       BUFTYPE(size_t) which_d,
 	       BUFTYPE(const ftype) points,
@@ -269,7 +240,7 @@ void FST_GONLY(second_half, cl_command_queue q,
 	       BUFTYPE(ftype) dists_out,
 	       BUFTYPE(ftype) space,
 	       BUFTYPE(ftype) dists) {
-  enqueueWriteBuf(q, sizeof(size_t) * n, sgns, signs);
+  BUFTYPE(const size_t) signs = MK_BUF_USE_RO_NA(c, size_t, n, sgns);
   size_t tmax = counts[0];
   for(size_t j = 1; j < 1 << d_low; j++)
     if(tmax < counts[j])
@@ -288,6 +259,7 @@ void FST_GONLY(second_half, cl_command_queue q,
     free(wh);
   LOOP3(q, compute_which(d_low, tmax, signs, which, which_d),
 	n, d_low + 1, tmax);
+  relMemU(signs);
   FST_GONLY(compdists, q, n, (d_low + 1) * tmax, d_high, n, 0,
 	    points, points, which_d, dists, space);
   FST_GONLY(sort_and_uniq, q, n, (d_low + 1) * tmax, which_d, dists);
@@ -356,8 +328,8 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   d_max |= d_max >> 16;
   d_max |= d_max >> 32;
   d_max++;
-  if(d_short > d_max)
-    d_short = d_max;
+  if(d_short > d)
+    d_short = d;
   if(rot_len_before * 2 > d)
     rot_len_before = d / 2;
   if(rot_len_after * 2 > d_max)
@@ -373,7 +345,7 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   LOOP2(q, subtract_off(d, pnts, row_sums), n, d);
   ftype *svcs;
   BUFTYPE(ftype) svecs;
-  BUFTYPE(ftype) svecs2;
+  BUFTYPE(ftype) svecs2;  
   if(save != NULL) {
     save->tries = tries;
     save->n = n;
@@ -390,41 +362,62 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
       for(size_t j = 0; j < d_short; j++)
 	svcs[i * d_short + j] = i == j;
     svecs = MK_BUF_RW_RW(gpu_context, ftype, d_short * d);
-    svecs2 = MK_BUF_RW_WO(gpu_context, ftype, d_short * d_max);
+    svecs2 = MK_BUF_RW_RW(gpu_context, ftype, d_short * d_max);
   }
   relMem(row_sums);
   BUFTYPE(size_t) pointers_out =
     MK_BUF_RW_NA(gpu_context, size_t, n * k * tries);
   BUFTYPE(ftype) dists_out =
     MK_BUF_RW_NA(gpu_context, ftype, n * k * tries);
-  ortho_info *inf = malloc(sizeof(ortho_info) * tries);
-  for(int i = 0; i < tries; i++)
-    inf[i] = FST_GONLY(make_ortho_info, gpu_context,
-		       rot_len_before, rots_before,
-		       rot_len_after, rots_after,
-		       d_short, d, d_max);
+  size_t rlt = (rot_len_before * rots_before + rot_len_after * rots_after);
+  BUFTYPE(size_t) ortho_dat;
+  BUFTYPE(ftype) rot_angs;
+  size_t *odt =
+      malloc(sizeof(size_t) * ((rlt * 2 + d_max + d_short) * tries + d_max));
+  ftype *angs = malloc(sizeof(ftype) * rlt * tries);
+
+  {
+    size_t *wkspc = odt + (rlt * 2 + d_max + d_short) * tries;
+    for(int i = 0; i < tries; i++)
+      MK_NAME(mk_orth_inf)(rot_len_before, rots_before,
+			   rot_len_after, rots_after,
+			   d_short, d, d_max,
+			   wkspc, odt + (rlt * 2 + d_max + d_short) * i,
+			   angs + rlt * i);
+    ortho_dat = MK_BUF_USE_RO_NA(gpu_context, size_t,
+				 (rlt * 2 + d_max + d_short) * tries, odt);
+    rot_angs = MK_BUF_USE_RO_NA(gpu_context, ftype, rlt * tries, angs);
+  }
+  BUFTYPE(ftype) ewk = MK_BUF_RW_RW(gpu_context, ftype, n * d);
+  BUFTYPE(ftype) ewk2 = MK_BUF_RW_WO(gpu_context, ftype, n * d_max);
   size_t *sgns = malloc(sizeof(size_t) * n * tries);
   BUFTYPE(size_t) signs = MK_BUF_RW_RW(gpu_context, size_t, n);
   for(int i = 0; i < tries; i++) {
-    TWO_GONLY(run_initial, gpu_context, q,
-	      n, d_short, d, d_max,
+    enqueueCopyBuf(q, sizeof(size_t) * n * d, pnts, ewk);
+    FST_GONLY(run_initial, q, n, d_short, d, d_max,
 	      rots_before, rot_len_before,
 	      rots_after, rot_len_after,
-	      inf + i, pnts, sgns + i * n, signs);
+	      rlt * i, (rlt * 2 + d_max + d_short) * i,
+	      rot_angs, ortho_dat, ewk, ewk2, sgns + i * n, signs);
     if(save != NULL)
       FST_GONLY(save_vecs, sq, d_short, d, d_max,
 		rots_before, rot_len_before, rots_after, rot_len_after,
-		inf + i, save->bases + i * d_short * d, svcs, svecs, svecs2);
+		rlt * i, (rlt * 2 + d_max + d_short) * i,
+		rot_angs, ortho_dat, save->bases + i * d_short * d,
+		svcs, svecs, svecs2);
   }
   if(save != NULL) {
     free(svcs);
     relMem(svecs);
     relMem(svecs2);
   }
+  relMem(signs);
+  relMem(ewk);
+  relMem(ewk2);
+  relMemU(ortho_dat);
+  relMemU(rot_angs);
   relMem(pnts);
   clFinish(q);
-  CLEANUP_DATA cup = {rots_before, rots_after, inf, tries};
-  waitForQueueThenCall(sq, MK_NAME(cleanup), (void *)&cup);
   size_t *counts = calloc(tries << d_short, sizeof(size_t));
   for(int i = 0; i < tries; i++)
     for(size_t j = 0; j < n; j++)
@@ -449,11 +442,10 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   BUFTYPE(const ftype) pnts2 =
     MK_BUF_USE_RO_NA(gpu_context, ftype, n * d, points);
   for(int i = 0; i < tries; i++)
-    FST_GONLY(second_half, q, n, k, d_short, d, save, i, tries,
-	      sgns + i * n, signs, counts + ((size_t)i << d_short),
+    TWO_GONLY(second_half, gpu_context, q, n, k, d_short, d, save, i, tries,
+	      sgns + i * n, counts + ((size_t)i << d_short),
 	      which, which_d, pnts2, pointers_out, dists_out, space,
 	      distspace);
-  relMem(signs);
   relMem(which);
   free(counts);
   free(sgns);
@@ -467,6 +459,8 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
   clReleaseCommandQueue(q);
   clFinish(sq);
   clReleaseCommandQueue(sq);
+  free(odt);
+  free(angs);
   if(save != NULL) {
     save->graph = fedges;
     fedges = malloc(sizeof(size_t) * n * k);

@@ -74,7 +74,7 @@ $(filter %.h,$(FAKE_FILES)): %.h:
 	touch $@
 
 $(OFILES): %.o: %.c %.h ftype.h
-	clang -c -g -DDIR="\"$(DIR)\"" $(OSOPT) $(OCL_OPT) $(WARNS) $<
+	clang -c -g -DDIR='"$(DIR)"' $(OSOPT) $(OCL_OPT) $(WARNS) $<
 # CC will complain about sign comparisons where one side is unsigned var
 # and other side is positive int literal.
 # Clang won't.

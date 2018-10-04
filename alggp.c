@@ -158,10 +158,10 @@ static void enqueueReadBuf(cl_command_queue q,
 
 static void enqueueWriteBuf(cl_command_queue q,
 			    size_t sz, const void *from, cl_mem to) {
-  if(clEnqueueWriteBuffer(q, to, 0, 0, sz, from, 0, NULL, NULL) != CL_SUCCESS)
-    fprintf(stderr, "Failed enqueue of read.\n"), exit(1);
+  if(clEnqueueWriteBuffer(q, to, CL_FALSE,
+			  0, sz, from, 0, NULL, NULL) != CL_SUCCESS)
+    fprintf(stderr, "Failed enqueue of write.\n"), exit(1);
 }
-
 
 static void enqueueFinAC(cl_command_queue q, size_t height, size_t k,
 			 size_t skip, cl_mem from, cl_mem to, size_t n) {
@@ -364,21 +364,9 @@ static cl_kernel cr_sqrtip(size_t h, cl_mem a) {
   return(k);
 }
 
-static cl_mem subbuf(cl_mem b, size_t off, size_t sz) {
+static cl_mem subbuf(cl_mem b, size_t off, size_t sz, cl_mem_flags f) {
   cl_buffer_region bci = {off, sz};
-  return(clCreateSubBuffer(b,
-			   CL_MEM_READ_ONLY |
-			   CL_MEM_HOST_NO_ACCESS,
-			   CL_BUFFER_CREATE_TYPE_REGION,
-			   &bci, NULL));
-}
-
-static void waitForQueueThenCall(cl_command_queue q,
-				 void (*f)(cl_event e, cl_int s, void *d),
-				 void *a) {
-  cl_event e;
-  clEnqueueMarkerWithWaitList(q, 0, NULL, &e);
-  clSetEventCallback(e, CL_COMPLETE, f, a);
+  return(clCreateSubBuffer(b, f, CL_BUFFER_CREATE_TYPE_REGION, &bci, NULL));
 }
 					
 #define OINT cl_int
@@ -420,7 +408,12 @@ static void waitForQueueThenCall(cl_command_queue q,
   checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY,	\
 	    sizeof(type) * (sz), NULL)
   
-#define MK_SUBBUF_RO_NA_REG(t, b, o, s) subbuf(b, (o) * sizeof(t), \
-					       (s) * sizeof(t))
+#define MK_SUBBUF_RO_NA_REG(t, b, o, s)	      			\
+  subbuf(b, (o) * sizeof(t), (s) * sizeof(t),			\
+	 CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS)
+
+#define MK_SUBBUF_RO_WO_REG(t, b, o, s)			      \
+  subbuf(b, (o) * sizeof(t), (s) * sizeof(t),		      \
+  CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY)
 #define TYPE_OF_COMP gpu
 #include "alg.c"
