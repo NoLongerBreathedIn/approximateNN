@@ -235,6 +235,7 @@ void TWO_GONLY(second_half, cl_context c, cl_command_queue q,
 	       const size_t *sgns,
 	       size_t *counts, BUFTYPE(size_t) which,
 	       BUFTYPE(size_t) which_d,
+	       size_t *wh,
 	       BUFTYPE(const ftype) points,
 	       BUFTYPE(size_t) pointers_out,
 	       BUFTYPE(ftype) dists_out,
@@ -253,10 +254,10 @@ void TWO_GONLY(second_half, cl_context c, cl_command_queue q,
     wh[sgns[j] * tmax + --counts[sgns[j]]] = j;
   enqueueWriteBuf(q, sizeof(size_t) * tmax << d_low, wh, which);
   if(save != NULL) {
-    save->which_par[i] = wh;
+    save->which_par[i] = malloc(sizeof(size_t) * tmax << d_low);
+    memcpy(save->which_par[i], wh, tmax << d_low);
     save->par_maxes[i] = tmax;
-  } else
-    free(wh);
+  }
   LOOP3(q, compute_which(d_low, tmax, signs, which, which_d),
 	n, d_low + 1, tmax);
   relMemU(signs);
@@ -441,14 +442,16 @@ size_t *MK_NAME(precomp) (size_t n, size_t k, size_t d, const ftype *points,
     MK_BUF_RW_RO(gpu_context, ftype, n * space_needed);
   BUFTYPE(const ftype) pnts2 =
     MK_BUF_USE_RO_NA(gpu_context, ftype, n * d, points);
+  size_t *wh = malloc(sizeof(size_t) * max_count << d_short);
   for(int i = 0; i < tries; i++)
     TWO_GONLY(second_half, gpu_context, q, n, k, d_short, d, save, i, tries,
 	      sgns + i * n, counts + ((size_t)i << d_short),
-	      which, which_d, pnts2, pointers_out, dists_out, space,
+	      which, which_d, wh, pnts2, pointers_out, dists_out, space,
 	      distspace);
   relMem(which);
   free(counts);
   free(sgns);
+  free(wh);
   size_t *fedges = FST_GONLY(det_results, q,
 			     n, k, d, n, k * tries,
 			     pointers_out, dists_out,
