@@ -246,7 +246,6 @@ void TWO_GONLY(second_half, cl_context c, cl_command_queue q,
   for(size_t j = 1; j < 1 << d_low; j++)
     if(tmax < counts[j])
       tmax = counts[j];
-  size_t *wh = malloc(sizeof(size_t) * tmax << d_low);
   for(size_t j = 0; j < 1 << d_low; j++)
     for(size_t l = counts[j]; l < tmax; l++)
       wh[j * tmax + l] = n;
