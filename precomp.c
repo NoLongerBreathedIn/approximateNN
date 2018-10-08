@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "ann.h"
 
 #define readstdin(x) fread(&(x), sizeof(x), 1, stdin)
@@ -30,6 +31,7 @@ int main(int argc, char **argv) {
   ftype *dists;
   ftype *data = malloc(sizeof(ftype) * n * d);
   fread(data, sizeof(ftype), n * d, stdin);
+  srandom(time(NULL));
   size_t *results = precomp(n, k, d, data, t, rb, rlb, ra, rla,
 			    argc > 3? &save : NULL,
 			    argc > 2? &dists : NULL, ucpu);
