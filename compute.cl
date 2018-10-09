@@ -272,3 +272,15 @@ __kernel void sqrtip(const cpu_size_t h,
   size_t i = get_global_id(0) * h + get_global_id(1);
   a[i] = sqrt(a[i]);
 }
+
+// If in is a by b,
+// out is b by a,
+// Θ(1) depth, Θ(ab) work,
+// transpose(a, b, in, out)(b, a);
+__kernel void transpose(const cpu_size_t a,
+			const cpu_size_t b,
+			__global const cpu_size_t *in,
+			__global cpu_size_t *out) {
+  size_t i = get_global_id(0), j = get_global_id(1);
+  out[i * a + j] = in[j * b + i];
+}

@@ -48,13 +48,15 @@ static void finish_cols(size_t h, size_t k, size_t skip, ftype *mat,
 #define MK_BUF_COPY_RW_NA(cont, type, sz, src) MBC(type, sz, src)
 #define MK_BUF_COPY_RO_NA(cont, type, sz, src) MBC(type, sz, src)
 #define MK_BUF_USE_RO_NA(cont, type, sz, src) (src)
+#define MK_BUF_USE_WO_NA(cont, type, sz, src) (src)
+#define MK_BUF_USE_RW_WO(cont, type, sz, src) (src)
 #define MK_BUF_RW_NA(cont, type, sz) MB(type, sz)
 #define MK_BUF_RW_RO(cont, type, sz) MB(type, sz)
 #define MK_BUF_RW_WO(cont, type, sz) MB(type, sz)
 #define MK_BUF_RW_RW(cont, type, sz) MB(type, sz)
 #define MK_BUF_RO_WO(cont, type, sz) MB(type, sz)
 #define MK_SUBBUF_RO_NA_REG(t, b, off, sz) ((b) + (off))
-#define MK_SUBBUF_RO_WO_REG(t, b, off, sz) ((b) + (off))
+#define MK_SUBBUF_RW_WO_REG(t, b, off, sz) ((b) + (off))
 #define TYPE_OF_COMP cpu
 #define relMem free
 #define relMemU(m)
