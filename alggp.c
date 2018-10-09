@@ -143,12 +143,6 @@ static void rd2D(cl_command_queue q,
 
 #define enqueueRead2D(q, t, ...) rd2D(q, __VA_ARGS__, sizeof(t))
 
-static void enqueueCopyBuf(cl_command_queue q,
-			   size_t sz, cl_mem from, cl_mem to) {
-  if(clEnqueueCopyBuffer(q, from, to, 0, 0, sz,
-			 0, NULL, NULL) != CL_SUCCESS)
-    fprintf(stderr, "Failed enqueue of copy.\n"), exit(1);
-}
 
 static void enqueueReadBuf(cl_command_queue q,
 			   size_t sz, cl_mem from, void *to) {
@@ -158,7 +152,7 @@ static void enqueueReadBuf(cl_command_queue q,
 
 static void enqueueWriteBuf(cl_command_queue q,
 			    size_t sz, const void *from, cl_mem to) {
-  if(clEnqueueWriteBuffer(q, to, CL_FALSE,
+  if(clEnqueueWriteBuffer(q, to, CL_TRUE,
 			  0, sz, from, 0, NULL, NULL) != CL_SUCCESS)
     fprintf(stderr, "Failed enqueue of write.\n"), exit(1);
 }
@@ -364,6 +358,15 @@ static cl_kernel cr_sqrtip(size_t h, cl_mem a) {
   return(k);
 }
 
+static cl_kernel cr_transpose(size_t a, size_t b, cl_mem i, cl_mem o) {
+  cl_kernel k = clone_kernel(transpose);
+  ska(k, 0, a);
+  ska(k, 1, b);
+  ska(k, 2, i);
+  ska(k, 3, o);
+  return(k);
+}
+
 static cl_mem subbuf(cl_mem b, size_t off, size_t sz, cl_mem_flags f) {
   cl_buffer_region bci = {off, sz};
   return(clCreateSubBuffer(b, f, CL_BUFFER_CREATE_TYPE_REGION, &bci, NULL));
@@ -391,6 +394,15 @@ static cl_mem subbuf(cl_mem b, size_t off, size_t sz, cl_mem_flags f) {
   checkedBC(cont, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR |	\
 	    CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz),		\
 	    (void *)src)
+#define MK_BUF_USE_WO_NA(cont, type, sz, src)			\
+  checkedBC(cont, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR |	\
+	    CL_MEM_HOST_NO_ACCESS, sizeof(type) * (sz),		\
+	    (void *)src)
+
+#define MK_BUF_USE_RW_WO(cont, type, sz, src)			\
+  checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR |	\
+	    CL_MEM_HOST_WRITE_ONLY, sizeof(type) * (sz),       	\
+	    (void *)src)
 #define MK_BUF_RW_NA(cont, type, sz)				\
   checkedBC(cont, CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS,	\
 	    sizeof(type) * (sz), NULL)
@@ -412,8 +424,8 @@ static cl_mem subbuf(cl_mem b, size_t off, size_t sz, cl_mem_flags f) {
   subbuf(b, (o) * sizeof(t), (s) * sizeof(t),			\
 	 CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS)
 
-#define MK_SUBBUF_RO_WO_REG(t, b, o, s)			      \
+#define MK_SUBBUF_RW_WO_REG(t, b, o, s)			      \
   subbuf(b, (o) * sizeof(t), (s) * sizeof(t),		      \
-  CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY)
+  CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY)
 #define TYPE_OF_COMP gpu
 #include "alg.c"
