@@ -158,7 +158,7 @@ static void enqueueReadBuf(cl_command_queue q,
 
 static void enqueueWriteBuf(cl_command_queue q,
 			    size_t sz, const void *from, cl_mem to) {
-  if(clEnqueueWriteBuffer(q, to, CL_FALSE,
+  if(clEnqueueWriteBuffer(q, to, CL_TRUE,
 			  0, sz, from, 0, NULL, NULL) != CL_SUCCESS)
     fprintf(stderr, "Failed enqueue of write.\n"), exit(1);
 }
