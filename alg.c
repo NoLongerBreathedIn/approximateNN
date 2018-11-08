@@ -180,9 +180,25 @@ void FST_GONLY(compdists, cl_command_queue q,
 	       BUFTYPE(const ftype) y, BUFTYPE(const ftype) points,
 	       BUFTYPE(size_t) pointers, BUFTYPE(ftype) dists,
 	       BUFTYPE(ftype) space) {
+#ifdef ocl2c
+  for(size_t x = 0; x < ycnt; x++)
+    for(size_t yy = s; yy < k; yy++)
+      if(pointers[x * k + yy] == n ||
+	 (y == points && pointers[x * k + yy] == x))
+	dists[x * k + yy] = 1.0/0.0;
+      else {
+	ftype dist = 0;
+	for(size_t z = 0; z < d; z++) {
+	  ftype dd = y[x * d + z] - points[pointers[x * k + yy] * d + z];
+	  dist += dd * dd;
+	}
+	dists[x * k + yy] = dist;
+      }
+#else
   LOOP3(q, compute_diffs_squared(d, k, n, s, pointers, y, points, space),
 	ycnt, k - s, d);
   FST_GONLY(add_up_cols, q, d, k, s, ycnt, space, dists);
+#endif
 }
 
 // This (a) figures out what the candidates for near neighbors are,
